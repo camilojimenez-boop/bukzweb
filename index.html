@@ -526,7 +526,7 @@ function localSearch(query){
 }
 async function aiSearch(history){const r=await fetch(CONFIG.CHAT_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:history})});const d=await r.json();return{reply:d.reply,books:(d.bookIds||[]).map(byId).filter(Boolean),suggestions:d.suggestions||[]};}
 function cleanQuery(q){
-  let s=' '+q.toLowerCase()+' ';
+  let s=' '+q.toLowerCase().replace(/[¿?¡!.,;:"'()]/g,' ')+' ';
   s=s.replace(/\b(hola|holaa|buenas|buenos|d[ií]as|tardes|noches|hey|ola|porfa|por|favor|recomi[eé]ndame|recomi[eé]nda|recomendaciones|recomendaci[oó]n|busco|buscar|quiero|necesito|dame|mu[eé]strame|sugi[eé]reme|sugiere|tienen|tienes|hay|gustar[ií]a|me|algo|libros|libro|de|del|se)\b/gi,' ');
   s=s.replace(/\s+/g,' ').trim();
   return s.length>=3 ? s : q.trim();
@@ -536,6 +536,7 @@ async function runSearch(q){
   if(CONFIG.CHAT_ENDPOINT){
     let candidates=[];
     if(shopifyReady()){ try{ candidates=await shopifySearch(cleanQuery(q)); }catch(e){} }
+    if(!candidates.length){ try{ candidates=localSearch(q).books||[]; }catch(e){} }   // respaldo: catálogo ya cargado
     try{
       const r=await fetch(CONFIG.CHAT_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
         messages: history.map(m=>({role:m.role,content:m.text})),
