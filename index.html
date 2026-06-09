@@ -321,6 +321,9 @@
   .ver-mas{display:block;margin:22px auto 4px;font-family:inherit;font-size:14px;font-weight:600;color:rgba(255,255,255,.85);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:11px 26px;cursor:pointer;transition:all .16s ease}
   .ver-mas:hover{background:rgba(242,232,92,.14);border-color:rgba(242,232,92,.5);color:#fff}
   .ver-mas.loading{opacity:.6;cursor:default}
+  .promo-head{background:linear-gradient(135deg,rgba(246,234,96,.16),rgba(246,234,96,.05));border:1px solid rgba(242,232,92,.35);border-radius:16px;padding:16px 20px;margin-bottom:20px}
+  .promo-head .pt{font-size:17px;font-weight:800;color:#F2E85C;letter-spacing:.2px}
+  .promo-head .ps{font-size:14px;color:#e8e6df;margin-top:5px;line-height:1.45}
 </style>
 </head>
 <body>
@@ -691,7 +694,7 @@ function wireCards(scope){
   scope.querySelectorAll('[data-modal]').forEach(btn=>btn.addEventListener('click',()=>openModal(byId(btn.dataset.modal))));
 }
 function appendBooks(grid,books){if(!grid)return;books.forEach(b=>{if(b&&b.id)seen[b.id]=b;});books.forEach((b,i)=>{const wrap=document.createElement('div');wrap.className='pop';wrap.style.animationDelay=(i*60)+'ms';wrap.innerHTML=cardHTML(b);grid.appendChild(wrap);wireCards(wrap);});}
-function addBot(reply,books,suggestions){(books||[]).forEach(b=>{if(b&&b.id)seen[b.id]=b;});const e=document.createElement('div');e.className='msg-bot';const base=150;let h=`<div class="txt fade">${esc(reply)}</div>`;
+function addBot(reply,books,suggestions){(books||[]).forEach(b=>{if(b&&b.id)seen[b.id]=b;});const e=document.createElement('div');e.className='msg-bot';const base=150;let h=reply?`<div class="txt fade">${esc(reply)}</div>`:'';
   if(books&&books.length)h+=`<div class="grid">${books.map((b,i)=>`<div class="pop" style="animation-delay:${base+i*90}ms">${cardHTML(b)}</div>`).join("")}</div>`;
   if(suggestions&&suggestions.length){const cd=base+(books?books.length:0)*90+140;h+=`<div class="chips fade" style="animation-delay:${cd}ms">${suggestions.map(s=>`<button class="chip" data-q="${esc(s)}">${esc(s)}</button>`).join("")}</div>`;}
   e.innerHTML=h;thread.appendChild(e);
@@ -903,8 +906,13 @@ async function showSection(kind){
     let page;try{page=await sfCollectionPage(handle,null,24);}catch(e){page={books:[],cursor:null,hasNext:false};}
     const lm=document.getElementById('loadingMsg');if(lm){lm.classList.add('fade-out');await new Promise(r=>setTimeout(r,200));lm.remove();}
     const reply=page.books.length?replies.promos:empty;
-    history.push({role:'assistant',text:reply});
-    const msgEl=addBot(reply,page.books,[]);
+    history.push({role:'assistant',text:page.books.length?'Promo del mes: compra 2 libros y lleva el tercero gratis en estos libros seleccionados.':empty});
+    const msgEl=addBot(page.books.length?'':reply,page.books,[]);
+    if(page.books.length){
+      const head=document.createElement('div');head.className='promo-head fade';
+      head.innerHTML='<div class="pt">Esta es la promo del mes</div><div class="ps">Compra 2 libros y lleva el tercero gratis en estos libros seleccionados.</div>';
+      msgEl.insertBefore(head,msgEl.firstChild);
+    }
     if(page.hasNext){
       const grid=msgEl.querySelector('.grid');
       const more=document.createElement('button');more.className='ver-mas';more.textContent='Ver más';
