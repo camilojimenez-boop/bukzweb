@@ -263,6 +263,36 @@
   #shopStatus.ok .dot{background:#7ad17a} #shopStatus.err .dot{background:#e6785a}
   #shopStatus code{background:rgba(255,255,255,.1);padding:1px 5px;border-radius:4px;font-size:12px}
   #shopStatus button{margin-left:auto;background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:17px;line-height:1;flex:none}
+  /* ── Modal de producto ── */
+  .pm-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .25s;z-index:65}
+  .pm-backdrop.open{opacity:1;pointer-events:auto}
+  .pm{position:fixed;left:50%;top:50%;transform:translate(-50%,-46%) scale(.97);opacity:0;pointer-events:none;transition:all .28s cubic-bezier(.2,.7,.2,1);width:min(680px,94vw);max-height:88vh;overflow-y:auto;background:#fff;color:#1f1f1f;border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,.5);z-index:66}
+  .pm.open{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto}
+  .pm-x{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;border:none;background:rgba(0,0,0,.06);color:#444;font-size:21px;line-height:1;cursor:pointer;z-index:2}
+  .pm-x:hover{background:rgba(0,0,0,.12)}
+  .pm-body{display:flex;gap:22px;padding:26px}
+  .pm-cover{width:180px;flex:none;aspect-ratio:3/4;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.2);background-size:cover;background-position:center}
+  .pm-info{flex:1;min-width:0;display:flex;flex-direction:column}
+  .pm-cat{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:#a3a299}
+  .pm-title{font-size:22px;font-weight:700;line-height:1.15;margin:5px 0 2px}
+  .pm-author{font-size:14px;color:#6a6a64;margin-bottom:12px}
+  .pm-price-row{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .pm-price{font-size:22px;font-weight:700}
+  .pm-stock{font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px}
+  .pm-stock.in{background:#e3f3e3;color:#2f7a2f} .pm-stock.out{background:#f3e3e0;color:#a8503c}
+  .pm-desc{font-size:13.5px;line-height:1.6;color:#4a4a44;margin-bottom:18px;max-height:170px;overflow-y:auto}
+  .pm-stores{border-top:1px solid #ececea;padding-top:14px;margin-bottom:18px}
+  .pm-sh{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#a3a299;margin-bottom:10px}
+  .pm-store{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #f2f1ee}
+  .pm-store:last-child{border-bottom:none}
+  .pm-store .nm{font-size:13.5px;font-weight:600;color:#2a2925}
+  .pm-ad{font-size:11.5px;color:#8a8a82;display:flex;align-items:center;gap:4px;text-decoration:none;margin-top:2px}
+  a.pm-ad:hover{color:#2a2925;text-decoration:underline}
+  .pm-store .av{font-size:11.5px;font-weight:700;white-space:nowrap}
+  .pm-store .av.ok{color:#2f7a2f} .pm-store .av.no{color:#c2c2bb}
+  .pm-add{background:var(--black);color:var(--soft);border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:auto;transition:transform .14s ease}
+  .pm-add:hover:not(:disabled){transform:translateY(-1px)} .pm-add:disabled{opacity:.5;cursor:default}
+  @media (max-width:560px){ .pm-body{flex-direction:column;padding:20px} .pm-cover{width:130px;align-self:center} }
 </style>
 </head>
 <body>
@@ -405,6 +435,23 @@
 
 <div id="shopStatus"><span class="dot"></span><span id="shopStatusMsg"></span><button id="shopStatusX">&times;</button></div>
 
+<div class="pm-backdrop" id="pmBackdrop"></div>
+<div class="pm" id="productModal" role="dialog" aria-modal="true">
+  <button class="pm-x" id="pmClose" aria-label="Cerrar">&times;</button>
+  <div class="pm-body">
+    <div class="pm-cover" id="pmCover"></div>
+    <div class="pm-info">
+      <span class="pm-cat" id="pmCat"></span>
+      <h2 class="pm-title" id="pmTitle"></h2>
+      <div class="pm-author" id="pmAuthor"></div>
+      <div class="pm-price-row"><span class="pm-price" id="pmPrice"></span><span class="pm-stock" id="pmStock"></span></div>
+      <p class="pm-desc" id="pmDesc"></p>
+      <div class="pm-stores" id="pmStores"></div>
+      <button class="pm-add" id="pmAdd">Agregar al carrito</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const CONFIG = {
   SITE_URL: "https://www.bukz.co",
@@ -463,13 +510,13 @@ function mapProduct(n){
   return { id:n.handle||n.id, titulo:n.title, autor:n.vendor||"", precio:Math.round(amt),
     cat:n.productType||"Libros", desc:(n.description||"").trim(),
     image:n.featuredImage?n.featuredImage.url:"", url:(CONFIG.SHOPIFY.productUrlBase||"")+(n.handle||""),
-    variantId:(n.variants&&n.variants.edges[0])?n.variants.edges[0].node.id:"", available:(n.availableForSale!==false), color:pickColor(n.handle||n.title||"x") };
+    variantId:(n.variants&&n.variants.edges[0])?n.variants.edges[0].node.id:"", available:(n.availableForSale!==false), tags:(n.tags||[]), color:pickColor(n.handle||n.title||"x") };
 }
 async function loadShopifyCatalog(){
   const sh=CONFIG.SHOPIFY;
   if(!sh||!sh.domain||sh.domain.startsWith("tu-tienda")||!sh.storefrontToken) return false;
   const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
-  const query=`query($cursor:String){products(first:50,after:$cursor,sortKey:BEST_SELLING){pageInfo{hasNextPage endCursor}edges{node{id title handle vendor productType description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id}}}}}}}`;
+  const query=`query($cursor:String){products(first:50,after:$cursor,sortKey:BEST_SELLING){pageInfo{hasNextPage endCursor}edges{node{id title handle vendor productType tags description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id}}}}}}}`;
   let cursor=null,all=[],pages=0;
   try{
     do{
@@ -487,7 +534,7 @@ function shopifyReady(){const sh=CONFIG.SHOPIFY;return !!(sh&&sh.domain&&!sh.dom
 async function shopifySearch(text){
   const sh=CONFIG.SHOPIFY;
   const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
-  const query=`query($q:String!){products(first:9,query:$q){edges{node{id title handle vendor productType description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id}}}}}}}`;
+  const query=`query($q:String!){products(first:9,query:$q){edges{node{id title handle vendor productType tags description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id}}}}}}}`;
   const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query,variables:{q:text}})});
   const j=await r.json();
   if(!j.data||!j.data.products){console.warn('Shopify:',j.errors||j);return [];}
@@ -571,38 +618,47 @@ document.getElementById('resetBtn').addEventListener('click',()=>{history=[];thr
 function cardHTML(b){const av=b.available!==false;return `<div class="card" data-id="${b.id}">
   <div class="cover" style="${coverStyle(b)}">${b.image?'':'<span class="mark">BUKZ</span>'}<span class="stock ${av?'in':'out'}">${av?'Disponible':'Agotado'}</span></div>
   <div class="meta"><span class="cat">${esc(b.cat)}</span><div class="title">${esc(b.titulo)}</div>${b.autor?`<div class="author">${esc(b.autor)}</div>`:''}<div class="foot"><span class="price">${fmtCOP(b.precio)}</span>${av?`<button class="add-btn" data-add="${b.id}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span class="add-lbl">Agregar</span></button>`:`<button class="add-btn out" disabled>Agotado</button>`}</div>
-  <button class="more" data-toggle="1">Detalles<span class="arr">▾</span></button>
-  <div class="details"><p class="d-desc${b.desc?'':' d-muted'}">${b.desc?esc(b.desc):'Sin descripción disponible.'}</p><div class="d-stores"><span class="d-h">Disponibilidad en tiendas</span><div class="d-list"></div></div></div>
+  <button class="more" data-modal="${b.id}">Ver detalles</button>
   </div></div>`;}
-async function fetchStores(b){
-  const sh=CONFIG.SHOPIFY;
-  if(!shopifyReady()||!b||!b.variantId) return null;
-  const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
-  const query=`query($id:ID!){node(id:$id){... on ProductVariant{storeAvailability(first:12){edges{node{available location{name}}}}}}}`;
-  try{
-    const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query,variables:{id:b.variantId}})});
-    const j=await r.json();
-    const conn=j.data&&j.data.node&&j.data.node.storeAvailability;
-    if(!conn) return [];
-    return conn.edges.map(e=>({name:(e.node.location&&e.node.location.name)||'Tienda',available:!!e.node.available}));
-  }catch(e){console.warn('storeAvailability:',e);return [];}
+
+// Sedes — disponibilidad según los tags del producto
+const STORES_DEF = [
+  {name:"Bukz Las Lomas", tags:["Bukz Las Lomas"], addr:"Cra. 30 #10-335, Medellín", map:"https://maps.app.goo.gl/ncr6sZot8dfz2SC66"},
+  {name:"Bukz Bogotá 109", tags:["Bukz Bogota 109"], addr:"Cl. 109 #18-39, Bogotá", map:"https://maps.app.goo.gl/VuqCzeo7FbHTdT1U6"},
+  {name:"Bukz Viva Envigado", tags:["Bukz Viva Envigado"], addr:"Cra. 48 #32B Sur-139, Envigado", map:"https://maps.app.goo.gl/r3rUqW5a3KBWVnuN7"},
+  {name:"Bukz Museo de Antioquia", tags:["Bukz Museo de Antioquia"], addr:"Cl. 52 #52-43, Medellín", map:"https://maps.app.goo.gl/iaD6Zvb397JLQsHU7"},
+  {name:"Bukz Dropshipping", tags:["Dropshipping","Bukz España"], intl:true},
+];
+const PIN='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+function storesHTML(b){
+  const tags=(b.tags||[]).map(t=>String(t).toLowerCase());
+  const has=arr=>arr.some(t=>tags.includes(t.toLowerCase()));
+  return '<div class="pm-sh">🏪 Disponibilidad en tiendas</div>'+STORES_DEF.map(s=>{
+    const ok=has(s.tags);
+    const addr=s.intl?'<span class="pm-ad">📦 Envío internacional</span>':`<a class="pm-ad" href="${s.map}" target="_blank" rel="noopener">${PIN}${esc(s.addr)}</a>`;
+    return `<div class="pm-store"><div><div class="nm">${esc(s.name)}</div>${addr}</div><span class="av ${ok?'ok':'no'}">${ok?'✓ Disponible':'✕ No disp.'}</span></div>`;
+  }).join('');
 }
-async function toggleDetails(btn){
-  const card=btn.closest('.card'), panel=card.querySelector('.details');
-  const open=panel.classList.toggle('open'); btn.classList.toggle('open',open);
-  if(open && !panel.dataset.loaded){
-    panel.dataset.loaded='1';
-    const list=panel.querySelector('.d-list'), b=byId(card.dataset.id);
-    if(!shopifyReady()){ list.innerHTML='<div class="d-note">Conecta tu tienda para ver disponibilidad por sede.</div>'; return; }
-    list.innerHTML='<div class="d-note">Cargando disponibilidad…</div>';
-    const stores=await fetchStores(b);
-    if(stores&&stores.length){
-      list.innerHTML=stores.map(s=>`<div class="d-store"><span class="sdot ${s.available?'on':''}"></span>${esc(s.name)}<span class="sav ${s.available?'':'no'}">${s.available?'Disponible':'Agotado'}</span></div>`).join("");
-    }else{
-      list.innerHTML='<div class="d-note">Este libro no tiene retiro en tienda configurado en Shopify.</div>';
-    }
-  }
+function pmShow(open){document.getElementById('productModal').classList.toggle('open',open);document.getElementById('pmBackdrop').classList.toggle('open',open);}
+function openModal(b){
+  if(!b) return;
+  document.getElementById('pmCover').style.cssText=coverStyle(b);
+  document.getElementById('pmCat').textContent=b.cat||'';
+  document.getElementById('pmTitle').textContent=b.titulo||'';
+  document.getElementById('pmAuthor').textContent=b.autor||'';
+  document.getElementById('pmPrice').textContent=fmtCOP(b.precio);
+  const av=b.available!==false;
+  const st=document.getElementById('pmStock');st.textContent=av?'Disponible':'Agotado';st.className='pm-stock '+(av?'in':'out');
+  document.getElementById('pmDesc').textContent=b.desc||'Sin descripción disponible.';
+  document.getElementById('pmStores').innerHTML=storesHTML(b);
+  const addBtn=document.getElementById('pmAdd');
+  addBtn.disabled=!av;addBtn.textContent=av?'Agregar al carrito':'Agotado';
+  addBtn.onclick=av?function(){addToCart(b.id);addBtn.textContent='✓ Añadido';setTimeout(()=>{addBtn.textContent='Agregar al carrito';},1200);}:null;
+  pmShow(true);
 }
+document.getElementById('pmClose').onclick=()=>pmShow(false);
+document.getElementById('pmBackdrop').onclick=()=>pmShow(false);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')pmShow(false);});
 function addUser(t){const e=document.createElement('div');e.className='msg-user fade';e.innerHTML=`<div class="bubble">${esc(t)}</div>`;thread.appendChild(e);toBottom();}
 function addLoading(){const e=document.createElement('div');e.className='msg-bot';e.id='loadingMsg';const sk='<div class="sk"><div class="shimmer" style="aspect-ratio:3/4"></div><div class="shimmer" style="height:11px;width:50%"></div><div class="shimmer" style="height:15px;width:80%"></div></div>';e.innerHTML=`<div class="txt" style="margin-bottom:18px"><span class="dots">Buscando en el catálogo</span></div><div class="grid">${sk.repeat(3)}</div>`;thread.appendChild(e);toBottom();}
 function addBot(reply,books,suggestions){(books||[]).forEach(b=>{if(b&&b.id)seen[b.id]=b;});const e=document.createElement('div');e.className='msg-bot';let h=`<div class="txt fade">${esc(reply)}</div>`;
@@ -611,7 +667,7 @@ function addBot(reply,books,suggestions){(books||[]).forEach(b=>{if(b&&b.id)seen
   e.innerHTML=h;thread.appendChild(e);
   e.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>ask(c.dataset.q)));
   e.querySelectorAll('[data-add]').forEach(btn=>btn.addEventListener('click',()=>addToCart(btn.dataset.add,btn)));
-  e.querySelectorAll('[data-toggle]').forEach(btn=>btn.addEventListener('click',()=>toggleDetails(btn)));
+  e.querySelectorAll('[data-modal]').forEach(btn=>btn.addEventListener('click',()=>openModal(byId(btn.dataset.modal))));
   toBottom();}
 function toBottom(){requestAnimationFrame(()=>{scroll.scrollTop=scroll.scrollHeight;});}
 async function ask(raw){const q=(raw||"").trim();if(!q||busy)return;busy=true;app.classList.add('chat-mode');history.push({role:"user",text:q});addUser(q);heroInput.value="";chatInput.value="";addLoading();
