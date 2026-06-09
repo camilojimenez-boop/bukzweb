@@ -47,13 +47,12 @@
   .switch:hover .knob{transform:translateX(18px)}
 
   /* HERO */
-  #hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:24px;overflow-y:auto}
-  .hero-wrap{width:100%;max-width:460px;margin-top:clamp(36px,16vh,140px)}
-  .home-rows{width:100%;max-width:880px;margin:42px auto 0;padding:0 6px}
-  .hr-sec{margin:0 0 24px}
-  .hr-sec h4{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.3px;color:#cfccc2;margin:0 0 13px;padding:0 10px}
-  .hr-row{display:flex;gap:14px;overflow-x:auto;padding:2px 10px 8px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
-  .hr-row::-webkit-scrollbar{height:0}
+  #hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;overflow-y:auto}
+  .hero-wrap{width:100%;max-width:460px}
+  .quick-cats{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+  .hero-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:16px;margin-top:20px}
+  .qcat{font-family:inherit;font-size:13px;font-weight:600;color:rgba(255,255,255,.85);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:9px 16px;cursor:pointer;transition:all .16s ease}
+  .qcat:hover{background:rgba(242,232,92,.14);border-color:rgba(242,232,92,.5);color:#fff;transform:translateY(-1px)}
   .greeting{color:rgba(140,137,128,1);font-size:17px;font-weight:400;letter-spacing:.2px;margin:0 0 14px 4px}
   .hero-bar{display:flex;align-items:center;height:52px;padding:0 24px;border-radius:999px;background:linear-gradient(180deg,#F6EA60 0%,#EEE157 100%);box-shadow:0 0 80px 8px rgba(240,225,90,.22),0 10px 34px rgba(0,0,0,.30)}
   .hero-bar input{flex:1;min-width:0;background:transparent;border:none;outline:none;font-family:inherit;font-size:15.5px;color:#3a382f}
@@ -343,12 +342,14 @@
     <div class="hero-wrap">
       <p class="greeting rise" style="animation-delay:1650ms">Bienvenido a tu librería favorita</p>
       <div class="rise" style="animation-delay:2000ms"><div class="hero-bar"><input id="heroInput" type="text" autocomplete="off" placeholder="¿Qué libro se te antoja hoy?" /></div></div>
-      <div class="hero-logo rise" style="animation-delay:2250ms"><img class="logo" id="logoHero" alt="BUKZ" /></div>
-    </div>
-    <div class="home-rows" id="homeRows">
-      <section class="hr-sec"><h4>📖 Libros del mes</h4><div class="hr-row" id="rowMes"></div></section>
-      <section class="hr-sec"><h4>✨ Novedades</h4><div class="hr-row" id="rowNew"></div></section>
-      <section class="hr-sec"><h4>🏷️ Promos del mes</h4><div class="hr-row" id="rowPromo"></div></section>
+      <div class="hero-foot rise" style="animation-delay:2200ms">
+        <div class="quick-cats">
+          <button class="qcat" data-cat="mes">Libros del mes</button>
+          <button class="qcat" data-cat="nuevos">Novedades</button>
+          <button class="qcat" data-cat="promos">Promos</button>
+        </div>
+        <img class="logo" id="logoHero" alt="BUKZ" />
+      </div>
     </div>
   </section>
 
@@ -829,7 +830,7 @@ document.getElementById('shopStatusX').onclick=()=>document.getElementById('shop
     if(j&&j.data&&j.data.products){
       await loadShopifyCatalog();
       showShopStatus(true,'✔ Conectado a Shopify ('+CATALOG.length+' productos cargados).');
-      loadHome();
+
     }else{
       showShopStatus(false,'Shopify respondió <b>HTTP '+r.status+'</b>: '+(j?JSON.stringify(j.errors||j):txt).slice(0,220));
     }
@@ -863,32 +864,26 @@ async function sfProducts(opts){
   const query='{products('+args.join(',')+'){edges{node{'+node+'}}}}';
   try{const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query})});const j=await r.json();if(!j.data||!j.data.products){console.warn('home:',j.errors||j);return [];}return j.data.products.edges.map(e=>mapProduct(e.node));}catch(e){console.warn('sfProducts:',e);return [];}
 }
-function spCard(p){
-  const sale=p.compareAt&&p.compareAt>p.precio;
-  const off=sale?Math.round((1-p.precio/p.compareAt)*100):0;
-  const price=sale?`<span class="p"><s>${fmtCOP(p.compareAt)}</s>${fmtCOP(p.precio)}</span>`:`<span class="p">${fmtCOP(p.precio)}</span>`;
-  return `<button class="sp-card" data-h="${esc(p.id)}"><span class="c" style="${coverStyle(p)}">${sale?`<span class="sp-off">-${off}%</span>`:''}${p.image?'':'<span class="cm">BUKZ</span>'}</span><span class="t">${esc(p.titulo)}</span>${price}</button>`;
+async function sectionBooks(kind){
+  if(kind==='mes'){const tag=(CONFIG.PANEL&&CONFIG.PANEL.libroDelMesTag)||'Libro del mes';return await sfProducts({query:"tag:'"+tag+"'",n:18});}
+  if(kind==='nuevos'){return await sfProducts({sortKey:'CREATED_AT',reverse:true,n:18});}
+  if(kind==='promos'){const promoTag=CONFIG.PANEL&&CONFIG.PANEL.promoTag;if(promoTag)return await sfProducts({query:"tag:'"+promoTag+"'",n:18});const base=await sfProducts({sortKey:'BEST_SELLING',n:60});return base.filter(p=>p.compareAt&&p.compareAt>p.precio).slice(0,18);}
+  return [];
 }
-function spSkeleton(el){if(!el)return;const sec=el.closest('section');if(sec)sec.style.display='';el.innerHTML=Array(5).fill('<div class="sp-card"><span class="c shimmer"></span><span class="t shimmer" style="height:12px;margin-top:9px;border-radius:4px"></span></div>').join('');}
-function spRender(el,products){if(!el)return;const sec=el.closest('section');if(!products||!products.length){if(sec)sec.style.display='none';return;}if(sec)sec.style.display='';products.forEach(p=>{if(p&&p.id)seen[p.id]=p;});el.innerHTML=products.map(spCard).join('');el.querySelectorAll('.sp-card').forEach(c=>c.addEventListener('click',()=>{const p=byId(c.dataset.h);if(p)openModal(p);}));}
-let homeLoaded=false;
-async function loadHome(){
-  if(homeLoaded||!shopifyReady())return;
-  homeLoaded=true;
-  ['rowMes','rowNew','rowPromo'].forEach(id=>spSkeleton(document.getElementById(id)));
-  const tag=(CONFIG.PANEL&&CONFIG.PANEL.libroDelMesTag)||'Libro del mes';
-  const promoTag=CONFIG.PANEL&&CONFIG.PANEL.promoTag;
-  const [mes,nuevos,base]=await Promise.all([
-    sfProducts({query:"tag:'"+tag+"'",n:14}),
-    sfProducts({sortKey:'CREATED_AT',reverse:true,n:14}),
-    sfProducts({sortKey:'BEST_SELLING',n:60})
-  ]);
-  const promos=promoTag ? await sfProducts({query:"tag:'"+promoTag+"'",n:14})
-                        : base.filter(p=>p.compareAt&&p.compareAt>p.precio).slice(0,14);
-  spRender(document.getElementById('rowMes'),mes);
-  spRender(document.getElementById('rowNew'),nuevos);
-  spRender(document.getElementById('rowPromo'),promos);
+async function showSection(kind){
+  if(busy)return;busy=true;
+  app.classList.add('chat-mode');
+  const labels={mes:'Libros del mes',nuevos:'Novedades',promos:'Promos del mes'};
+  const replies={mes:'Estos son los libros del mes',nuevos:'Lo más nuevo que acaba de llegar',promos:'Promos del mes'};
+  history.push({role:'user',text:labels[kind]});
+  const uEl=addUser(labels[kind]);addLoading();scrollToEl(uEl);
+  let books=[];try{books=await sectionBooks(kind);}catch(e){}
+  const lm=document.getElementById('loadingMsg');if(lm){lm.classList.add('fade-out');await new Promise(r=>setTimeout(r,200));lm.remove();}
+  const reply=books.length?replies[kind]:'Por ahora no hay nada en esta sección. Prueba con una búsqueda o escríbenos por WhatsApp.';
+  history.push({role:'assistant',text:reply});
+  addBot(reply,books,[]);scrollToEl(uEl);busy=false;
 }
+document.querySelectorAll('.qcat').forEach(b=>b.addEventListener('click',()=>showSection(b.dataset.cat)));
 </script>
 </body>
 </html>
