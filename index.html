@@ -415,7 +415,7 @@ const CONFIG = {
     apiVersion: "2024-10",
     productUrlBase: "https://www.bukz.co/products/"
   },
-  CHAT_ENDPOINT: "",     // backend de IA (vacío = motor local de demo)
+  CHAT_ENDPOINT: "https://bukiaweb.camilo-jimenez.workers.dev",     // backend de IA (Cloudflare Worker)
   // Producción: Bold necesita tu llave de comercio + firma de integridad (hash)
   // generada en backend. Siigo necesita su API (auth + crear factura) tras el pago.
   BOLD:  { merchantId: "", apiKey: "", currency: "COP" },
@@ -526,7 +526,22 @@ function localSearch(query){
 }
 async function aiSearch(history){const r=await fetch(CONFIG.CHAT_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:history})});const d=await r.json();return{reply:d.reply,books:(d.bookIds||[]).map(byId).filter(Boolean),suggestions:d.suggestions||[]};}
 async function runSearch(q){
-  if(CONFIG.CHAT_ENDPOINT) return aiSearch(history.map(m=>({role:m.role,content:m.text})));
+  // ── Modo IA: Claude Sonnet vía tu backend (CONFIG.CHAT_ENDPOINT) ──
+  if(CONFIG.CHAT_ENDPOINT){
+    let candidates=[];
+    if(shopifyReady()){ try{ candidates=await shopifySearch(q); }catch(e){} }
+    try{
+      const r=await fetch(CONFIG.CHAT_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+        messages: history.map(m=>({role:m.role,content:m.text})),
+        candidates: candidates.map(b=>({handle:b.id,titulo:b.titulo,autor:b.autor,precio:b.precio,cat:b.cat,available:b.available,desc:(b.desc||'').slice(0,180)}))
+      })});
+      const d=await r.json();
+      const show=d.show||d.bookIds||[];
+      const books=show.map(h=>candidates.find(b=>b.id===String(h))).filter(Boolean);
+      return { reply:d.reply||"¿En qué más te ayudo?", books, suggestions:d.suggestions||[] };
+    }catch(e){ console.warn('Backend IA:',e); }   // si falla, cae a búsqueda directa
+  }
+  // ── Sin backend de IA: búsqueda directa en Shopify ──
   if(shopifyReady()){
     let books=[]; try{ books=await shopifySearch(q); }catch(e){ console.warn('Búsqueda Shopify:',e); }
     if(/(barat|economic|precio|menos de)/.test(norm(q))) books=books.slice().sort((a,b)=>a.precio-b.precio);
