@@ -24,10 +24,8 @@
   @keyframes drift2{0%{transform:translate(3%,2%) scale(1)}33%{transform:translate(-4%,-3%) scale(1.12)}66%{transform:translate(2%,-2%) scale(.96)}100%{transform:translate(3%,2%) scale(1)}}
   #app.chat-mode{background:var(--black);}
   /* Partículas flotando en la luz */
-  .particles{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
-  .p{position:absolute;border-radius:50%;background:radial-gradient(circle, rgba(245,228,120,.9) 0%, rgba(245,228,120,0) 70%);animation:mote var(--dur) ease-in-out infinite;animation-delay:var(--del)}
-  @keyframes mote{0%,100%{transform:translate(0,0) scale(1);opacity:var(--o0)}50%{transform:translate(var(--mx),var(--my)) scale(var(--ms));opacity:var(--o1)}}
-  #app.chat-mode .particles{opacity:.55;transition:opacity 1s ease}
+  #particleCanvas{position:absolute;inset:0;z-index:0;pointer-events:none;display:block}
+  #app.chat-mode #particleCanvas{opacity:.5;transition:opacity 1s ease}
   ::-webkit-scrollbar{width:7px} ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:8px}
   button{font-family:inherit}
 
@@ -845,30 +843,46 @@ document.getElementById('doneBtn').onclick=()=>{
   cart=[];updateBadge();renderCart();
 };
 
-/* ─────────── Partículas flotantes ─────────── */
+/* ─────────── Partículas interactivas (canvas) ─────────── */
 (function(){
   if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const appEl=document.getElementById('app');
-  const layer=document.createElement('div'); layer.className='particles';
-  appEl.insertBefore(layer, appEl.querySelector('.topbar'));
-  const n = window.innerWidth < 600 ? 11 : 20;
+  const canvas=document.createElement('canvas'); canvas.id='particleCanvas';
+  appEl.insertBefore(canvas, appEl.querySelector('.topbar'));
+  const ctx=canvas.getContext('2d');
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  let W=0,H=0;
+  function resize(){W=appEl.clientWidth;H=appEl.clientHeight;canvas.width=W*dpr;canvas.height=H*dpr;canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(dpr,0,0,dpr,0,0);}
+  resize(); window.addEventListener('resize',resize);
   const rnd=(a,b)=>a+Math.random()*(b-a);
-  for(let i=0;i<n;i++){
-    const p=document.createElement('div'); p.className='p';
-    const size=rnd(4,15);
-    p.style.width=p.style.height=size.toFixed(1)+'px';
-    p.style.left=rnd(8,92).toFixed(1)+'%';
-    p.style.top=rnd(8,92).toFixed(1)+'%';
-    p.style.filter='blur('+rnd(1,5).toFixed(1)+'px)';
-    p.style.setProperty('--mx', rnd(-34,34).toFixed(0)+'px');
-    p.style.setProperty('--my', rnd(-42,28).toFixed(0)+'px');
-    p.style.setProperty('--ms', rnd(0.8,1.35).toFixed(2));
-    p.style.setProperty('--o0', rnd(0.04,0.16).toFixed(2));
-    p.style.setProperty('--o1', rnd(0.18,0.42).toFixed(2));
-    p.style.setProperty('--dur', rnd(7,17).toFixed(1)+'s');
-    p.style.setProperty('--del', (-rnd(0,12)).toFixed(1)+'s');
-    layer.appendChild(p);
+  const N = W<600 ? 18 : 32;
+  const parts=[];
+  for(let i=0;i<N;i++)parts.push({x:rnd(0,W),y:rnd(0,H),r:rnd(1.4,5.5),vx:rnd(-.12,.12),vy:rnd(-.12,.12),a:rnd(.12,.4),tw:rnd(0,Math.PI*2),ts:rnd(.012,.03)});
+  const pointer={x:-9999,y:-9999,active:false};
+  window.addEventListener('pointermove',e=>{pointer.x=e.clientX;pointer.y=e.clientY;pointer.active=true;},{passive:true});
+  window.addEventListener('pointerout',()=>{pointer.active=false;});
+  window.addEventListener('pointerdown',e=>{ // clic → dispersión suave
+    for(const p of parts){const dx=p.x-e.clientX,dy=p.y-e.clientY,d=Math.hypot(dx,dy)||1;if(d<240){const f=(1-d/240)*5.5;p.vx+=dx/d*f;p.vy+=dy/d*f;}}
+  },{passive:true});
+  const R=135; // radio de repulsión del puntero
+  function tick(){
+    ctx.clearRect(0,0,W,H);
+    for(const p of parts){
+      p.tw+=p.ts;
+      if(pointer.active){const dx=p.x-pointer.x,dy=p.y-pointer.y,d=Math.hypot(dx,dy);if(d<R&&d>0){const f=(1-d/R)*0.7;p.vx+=dx/d*f;p.vy+=dy/d*f;}}
+      p.x+=p.vx+Math.cos(p.tw)*0.12; p.y+=p.vy+Math.sin(p.tw*0.8)*0.12;
+      p.vx*=0.93; p.vy*=0.93;
+      if(p.x<-20)p.x=W+20; else if(p.x>W+20)p.x=-20;
+      if(p.y<-20)p.y=H+20; else if(p.y>H+20)p.y=-20;
+      const op=p.a*(0.7+0.3*Math.sin(p.tw)), rad=p.r*3;
+      const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,rad);
+      g.addColorStop(0,'rgba(245,228,120,'+op.toFixed(3)+')');
+      g.addColorStop(1,'rgba(245,228,120,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,rad,0,Math.PI*2); ctx.fill();
+    }
+    requestAnimationFrame(tick);
   }
+  requestAnimationFrame(tick);
 })();
 /* ─────────── Diagnóstico + carga de Shopify al iniciar ─────────── */
 function showShopStatus(ok,msg){const el=document.getElementById('shopStatus');el.className=ok?'ok':'err';el.style.display='flex';document.getElementById('shopStatusMsg').innerHTML=msg;if(ok)setTimeout(()=>{el.style.display='none';},5000);}
