@@ -525,11 +525,17 @@ function localSearch(query){
   return {reply:intentReply,books,suggestions};
 }
 async function aiSearch(history){const r=await fetch(CONFIG.CHAT_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:history})});const d=await r.json();return{reply:d.reply,books:(d.bookIds||[]).map(byId).filter(Boolean),suggestions:d.suggestions||[]};}
+function cleanQuery(q){
+  let s=' '+q.toLowerCase()+' ';
+  s=s.replace(/\b(hola|holaa|buenas|buenos|d[ií]as|tardes|noches|hey|ola|porfa|por|favor|recomi[eé]ndame|recomi[eé]nda|recomendaciones|recomendaci[oó]n|busco|buscar|quiero|necesito|dame|mu[eé]strame|sugi[eé]reme|sugiere|tienen|tienes|hay|gustar[ií]a|me|algo|libros|libro|de|del|se)\b/gi,' ');
+  s=s.replace(/\s+/g,' ').trim();
+  return s.length>=3 ? s : q.trim();
+}
 async function runSearch(q){
   // ── Modo IA: Claude Sonnet vía tu backend (CONFIG.CHAT_ENDPOINT) ──
   if(CONFIG.CHAT_ENDPOINT){
     let candidates=[];
-    if(shopifyReady()){ try{ candidates=await shopifySearch(q); }catch(e){} }
+    if(shopifyReady()){ try{ candidates=await shopifySearch(cleanQuery(q)); }catch(e){} }
     try{
       const r=await fetch(CONFIG.CHAT_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
         messages: history.map(m=>({role:m.role,content:m.text})),
@@ -543,7 +549,7 @@ async function runSearch(q){
   }
   // ── Sin backend de IA: búsqueda directa en Shopify ──
   if(shopifyReady()){
-    let books=[]; try{ books=await shopifySearch(q); }catch(e){ console.warn('Búsqueda Shopify:',e); }
+    let books=[]; try{ books=await shopifySearch(cleanQuery(q)); }catch(e){ console.warn('Búsqueda Shopify:',e); }
     if(/(barat|economic|precio|menos de)/.test(norm(q))) books=books.slice().sort((a,b)=>a.precio-b.precio);
     if(books.length) return { reply:friendlyReply(q), books, suggestions:chipsFor(books) };
     return { reply:"Mmm, no encontré ese en la tienda. Prueba con otro título, autor o tema.", books:[], suggestions:["Novedades","Clásicos","Para regalar"] };
