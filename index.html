@@ -144,6 +144,9 @@
   .row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
   .row .t{font-size:14px;color:rgba(255,255,255,.6)} .row .v{font-size:20px;font-weight:700}
   .btn-primary{width:100%;background:var(--soft);color:var(--black);border:none;border-radius:12px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;transition:transform .14s ease,opacity .2s}
+  .btn-secondary{width:100%;background:transparent;color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:12px;font-size:13px;font-weight:600;cursor:pointer;margin-top:10px;transition:all .15s ease}
+  .btn-secondary:hover:not(:disabled){border-color:rgba(255,255,255,.32);color:#fff}
+  .btn-secondary:disabled{opacity:.35;cursor:default}
   .btn-primary:hover{transform:translateY(-1px)} .btn-primary:disabled{opacity:.4;cursor:default;transform:none}
 
   /* ── CHECKOUT (claro) ── */
@@ -287,7 +290,8 @@
   <div class="drawer-items" id="cartItems"></div>
   <div class="drawer-foot">
     <div class="row"><span class="t">Subtotal</span><span class="v" id="cartSubtotal">$0</span></div>
-    <button class="btn-primary" id="goCheckout" disabled>Continuar al pago</button>
+    <button class="btn-primary" id="buyNow" disabled>Comprar ahora</button>
+    <button class="btn-secondary" id="goCheckout" disabled>Checkout de prueba (Bold/Siigo)</button>
   </div>
 </aside>
 
@@ -424,7 +428,8 @@ let CATALOG = [
   { id:"15", titulo:"Sapiens", autor:"Yuval Noah Harari", precio:78000, cat:"Ensayo", desc:"De animales a dioses: una historia de la humanidad.", color:"#8A6A2B" },
   { id:"16", titulo:"Distancia de rescate", autor:"Samanta Schweblin", precio:41000, cat:"Terror", desc:"Una novela inquietante sobre el miedo y la maternidad.", color:"#3A4A4A" }
 ];
-const byId = id => CATALOG.find(b=>b.id===String(id));
+const seen = {};
+const byId = id => CATALOG.find(b=>b.id===String(id)) || seen[String(id)];
 const fmtCOP = n => "$" + n.toLocaleString("es-CO",{maximumFractionDigits:0});
 const norm = s => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -527,7 +532,7 @@ function cardHTML(b){return `<div class="card" data-id="${b.id}">
   <button class="add-btn" data-add="${b.id}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span class="add-lbl">Agregar</span></button></div></div></div>`;}
 function addUser(t){const e=document.createElement('div');e.className='msg-user fade';e.innerHTML=`<div class="bubble">${esc(t)}</div>`;thread.appendChild(e);toBottom();}
 function addLoading(){const e=document.createElement('div');e.className='msg-bot';e.id='loadingMsg';const sk='<div class="sk"><div class="shimmer" style="aspect-ratio:3/4"></div><div class="shimmer" style="height:11px;width:50%"></div><div class="shimmer" style="height:15px;width:80%"></div></div>';e.innerHTML=`<div class="txt" style="margin-bottom:18px"><span class="dots">Buscando en el catálogo</span></div><div class="grid">${sk.repeat(3)}</div>`;thread.appendChild(e);toBottom();}
-function addBot(reply,books,suggestions){const e=document.createElement('div');e.className='msg-bot';let h=`<div class="txt fade">${esc(reply)}</div>`;
+function addBot(reply,books,suggestions){(books||[]).forEach(b=>{if(b&&b.id)seen[b.id]=b;});const e=document.createElement('div');e.className='msg-bot';let h=`<div class="txt fade">${esc(reply)}</div>`;
   if(books&&books.length)h+=`<div class="grid">${books.map((b,i)=>`<div class="pop" style="animation-delay:${i*70}ms">${cardHTML(b)}</div>`).join("")}</div>`;
   if(suggestions&&suggestions.length)h+=`<div class="chips">${suggestions.map(s=>`<button class="chip" data-q="${esc(s)}">${esc(s)}</button>`).join("")}</div>`;
   e.innerHTML=h;thread.appendChild(e);
@@ -557,7 +562,8 @@ function renderCart(){const box=document.getElementById('cartItems');
     box.querySelectorAll('[data-m]').forEach(x=>x.onclick=()=>setQty(x.dataset.m,-1));
     box.querySelectorAll('[data-p]').forEach(x=>x.onclick=()=>setQty(x.dataset.p,1));}
   document.getElementById('cartSubtotal').textContent=fmtCOP(cartSubtotal());
-  document.getElementById('goCheckout').disabled=!cart.length;}
+  document.getElementById('goCheckout').disabled=!cart.length;
+  document.getElementById('buyNow').disabled=!cart.length;}
 const backdrop=document.getElementById('backdrop'),drawer=document.getElementById('drawer');
 function openCart(){renderCart();drawer.classList.add('open');backdrop.classList.add('open');}
 function closeCart(){drawer.classList.remove('open');backdrop.classList.remove('open');}
@@ -568,7 +574,27 @@ updateBadge();renderCart();
 
 /* ─────────── CHECKOUT ─────────── */
 const checkout=document.getElementById('checkout');
-document.getElementById('goCheckout').onclick=()=>{if(!cart.length)return;closeCart();renderSummary();checkout.classList.add('open');checkout.scrollTop=0;};
+function openCustomCheckout(){if(!cart.length)return;closeCart();renderSummary();checkout.classList.add('open');checkout.scrollTop=0;}
+document.getElementById('goCheckout').onclick=openCustomCheckout;
+
+// Comprar ahora → crea el carrito en Shopify y va a su checkout nativo
+async function shopifyCheckout(btn){
+  const sh=CONFIG.SHOPIFY;
+  const lines=cart.map(i=>{const b=byId(i.id);return (b&&b.variantId)?{merchandiseId:b.variantId,quantity:i.qty}:null;}).filter(Boolean);
+  if(!lines.length){ openCustomCheckout(); return; }   // sin variante (catálogo de muestra) → checkout de prueba
+  const old=btn?btn.textContent:''; if(btn){btn.disabled=true;btn.textContent='Redirigiendo…';}
+  try{
+    const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
+    const query=`mutation($lines:[CartLineInput!]!){cartCreate(input:{lines:$lines}){cart{checkoutUrl} userErrors{message}}}`;
+    const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query,variables:{lines}})});
+    const j=await r.json();
+    const url=j.data&&j.data.cartCreate&&j.data.cartCreate.cart&&j.data.cartCreate.cart.checkoutUrl;
+    if(url){ window.location.href=url; return; }
+    console.warn('cartCreate:',j); alert('No se pudo abrir el checkout de Shopify. Revisa la consola.');
+  }catch(e){ console.warn(e); alert('Error al ir al checkout de Shopify.'); }
+  if(btn){btn.disabled=false;btn.textContent=old;}
+}
+document.getElementById('buyNow').onclick=function(){ if(!cart.length)return; shopifyReady()?shopifyCheckout(this):openCustomCheckout(); };
 document.getElementById('closeCheckout').onclick=()=>checkout.classList.remove('open');
 
 // Entrega: envío vs retiro
