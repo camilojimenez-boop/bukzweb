@@ -234,6 +234,12 @@
     .done-card{padding:30px 22px}
   }
   @media (max-width:360px){ .grid{grid-template-columns:1fr} }
+  #shopStatus{position:fixed;left:14px;bottom:14px;z-index:80;max-width:min(440px,92vw);display:none;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:12px;font-size:13px;line-height:1.45;background:#26251f;border:1px solid rgba(255,255,255,.12);color:#eee;box-shadow:0 8px 30px rgba(0,0,0,.45)}
+  #shopStatus.ok{border-color:rgba(120,200,120,.5)} #shopStatus.err{border-color:rgba(230,120,90,.6)}
+  #shopStatus .dot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:none;background:#bbb}
+  #shopStatus.ok .dot{background:#7ad17a} #shopStatus.err .dot{background:#e6785a}
+  #shopStatus code{background:rgba(255,255,255,.1);padding:1px 5px;border-radius:4px;font-size:12px}
+  #shopStatus button{margin-left:auto;background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:17px;line-height:1;flex:none}
 </style>
 </head>
 <body>
@@ -372,6 +378,8 @@
     <button class="btn-primary" id="doneBtn">Seguir explorando</button>
   </div>
 </div>
+
+<div id="shopStatus"><span class="dot"></span><span id="shopStatusMsg"></span><button id="shopStatusX">&times;</button></div>
 
 <script>
 const CONFIG = {
@@ -628,11 +636,29 @@ document.getElementById('doneBtn').onclick=()=>{
     layer.appendChild(p);
   }
 })();
-/* ─────────── Cargar catálogo real de Shopify al iniciar ─────────── */
-loadShopifyCatalog().then(ok=>{
-  if(ok) console.log('✔ Catálogo de Shopify cargado:', CATALOG.length, 'productos');
-  else console.log('Usando catálogo de muestra (configura CONFIG.SHOPIFY para conectar tu tienda).');
-});
+/* ─────────── Diagnóstico + carga de Shopify al iniciar ─────────── */
+function showShopStatus(ok,msg){const el=document.getElementById('shopStatus');el.className=ok?'ok':'err';el.style.display='flex';document.getElementById('shopStatusMsg').innerHTML=msg;if(ok)setTimeout(()=>{el.style.display='none';},5000);}
+document.getElementById('shopStatusX').onclick=()=>document.getElementById('shopStatus').style.display='none';
+(async function bootShopify(){
+  if(!shopifyReady()){console.log('Catálogo de muestra (Shopify sin configurar).');return;}
+  if(location.protocol==='file:' || location.origin==='null' || !location.origin){
+    showShopStatus(false,'<b>Estás en una vista previa / sandbox</b> (origen <code>null</code>), no en un sitio real.<br>Shopify solo conecta desde una URL <code>https://</code> de verdad. Súbelo a <b>GitHub Pages</b> y ábrelo desde ahí.');
+    return;
+  }
+  const sh=CONFIG.SHOPIFY;
+  try{
+    const r=await fetch(`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query:'{products(first:1){edges{node{title}}}}'})});
+    const txt=await r.text(); let j=null; try{j=JSON.parse(txt);}catch(_){}
+    if(j&&j.data&&j.data.products){
+      await loadShopifyCatalog();
+      showShopStatus(true,'✔ Conectado a Shopify ('+CATALOG.length+' productos cargados).');
+    }else{
+      showShopStatus(false,'Shopify respondió <b>HTTP '+r.status+'</b>: '+(j?JSON.stringify(j.errors||j):txt).slice(0,220));
+    }
+  }catch(e){
+    showShopStatus(false,'<b>Failed to fetch.</b> Casi siempre es: token sin scope de Storefront, app no instalada, o CORS.<br>Origen: <code>'+location.origin+'</code> · '+e.message);
+  }
+})();
 </script>
 </body>
 </html>
