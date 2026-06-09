@@ -324,6 +324,10 @@
   .promo-head{background:linear-gradient(135deg,rgba(246,234,96,.16),rgba(246,234,96,.05));border:1px solid rgba(242,232,92,.35);border-radius:16px;padding:16px 20px;margin-bottom:20px}
   .promo-head .pt{font-size:17px;font-weight:800;color:#F2E85C;letter-spacing:.2px}
   .promo-head .ps{font-size:14px;color:#e8e6df;margin-top:5px;line-height:1.45}
+  .ci-promo{display:inline-block;margin-left:7px;font-size:10px;font-weight:800;letter-spacing:.4px;color:#3a382f;background:var(--soft);border-radius:5px;padding:1px 6px;vertical-align:middle}
+  .promo-row .v{color:#2f7a2f;font-weight:700}
+  .total-row .t{font-weight:700} .total-row .v{font-weight:800;font-size:16px}
+  .promo-note{font-size:12px;line-height:1.4;color:var(--soft);background:rgba(242,232,92,.08);border:1px solid rgba(242,232,92,.25);border-radius:10px;padding:9px 12px;margin:4px 0 12px}
 </style>
 </head>
 <body>
@@ -379,6 +383,9 @@
   <div class="drawer-items" id="cartItems"></div>
   <div class="drawer-foot">
     <div class="row"><span class="t">Subtotal</span><span class="v" id="cartSubtotal">$0</span></div>
+    <div class="row promo-row" id="promoRow" style="display:none"><span class="t" id="promoLabel">Promo 3x2</span><span class="v" id="cartDiscount">−$0</span></div>
+    <div class="row total-row" id="totalRow" style="display:none"><span class="t">Total</span><span class="v" id="cartTotal">$0</span></div>
+    <div class="promo-note" id="promoNote" style="display:none"></div>
     <button class="btn-primary" id="buyNow" disabled>Comprar ahora</button>
     <button class="btn-secondary" id="goCheckout" disabled>Checkout de prueba (Bold/Siigo)</button>
   </div>
@@ -455,6 +462,7 @@
       <h3>Resumen del pedido</h3>
       <div id="sumItems"></div>
       <div class="sum-line"><span>Subtotal</span><span id="sumSub">$0</span></div>
+      <div class="sum-line" id="sumDiscount" style="display:none"><span>Promo 3x2</span><span class="v">−$0</span></div>
       <div class="sum-line"><span>Envío</span><span id="sumShip">Gratis</span></div>
       <div class="sum-total"><span>Total</span><span id="sumTotal">$0</span></div>
     </div>
@@ -710,9 +718,36 @@ heroInput.focus();
 
 /* ─────────── CARRITO ─────────── */
 let cart=[]; // {id, qty}
+let PROMO_SET=new Set(); // handles de la colección en promo (3x2)
 const cartBadge=document.getElementById('cartBadge');
+function isPromo(b){return !!(b&&PROMO_SET.has(b.id));}
 function cartCount(){return cart.reduce((s,i)=>s+i.qty,0);}
-function cartSubtotal(){return cart.reduce((s,i)=>s+byId(i.id).precio*i.qty,0);}
+function cartSubtotal(){return cart.reduce((s,i)=>{const b=byId(i.id);return s+(b?b.precio*i.qty:0);},0);}
+function promoCalc(){
+  const units=[];
+  cart.forEach(i=>{const b=byId(i.id);if(isPromo(b)){for(let k=0;k<i.qty;k++)units.push(b.precio);}});
+  units.sort((a,b)=>a-b);
+  const free=Math.floor(units.length/3);
+  let discount=0;for(let k=0;k<free;k++)discount+=units[k];
+  return {discount,free,count:units.length};
+}
+function cartTotal(){return cartSubtotal()-promoCalc().discount;}
+async function loadPromoSet(){
+  if(!shopifyReady())return;
+  const sh=CONFIG.SHOPIFY;const handle=(CONFIG.PANEL&&CONFIG.PANEL.promoCollection)||'editorial-planeta';
+  const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
+  let cursor=null,guard=0;
+  try{
+    while(guard<6){guard++;
+      const q=`query($c:String){collection(handle:${JSON.stringify(handle)}){products(first:100,after:$c){pageInfo{hasNextPage endCursor}edges{node{handle}}}}}`;
+      const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query:q,variables:{c:cursor}})});
+      const j=await r.json();const c=j.data&&j.data.collection;if(!c||!c.products)break;
+      c.products.edges.forEach(e=>{if(e.node.handle)PROMO_SET.add(e.node.handle);});
+      if(c.products.pageInfo.hasNextPage)cursor=c.products.pageInfo.endCursor;else break;
+    }
+  }catch(e){console.warn('promoSet:',e);}
+  renderCart();
+}
 function addToCart(id,btn){const it=cart.find(i=>i.id===id);if(it)it.qty++;else cart.push({id,qty:1});updateBadge();renderCart();
   if(btn){btn.classList.add('added');btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span class="add-lbl">Añadido</span>';setTimeout(()=>{btn.classList.remove('added');btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span class="add-lbl">Agregar</span>';},1100);}}
 function setQty(id,d){const it=cart.find(i=>i.id===id);if(!it)return;it.qty+=d;if(it.qty<=0)cart=cart.filter(i=>i.id!==id);updateBadge();renderCart();}
@@ -720,11 +755,19 @@ function updateBadge(){const n=cartCount();cartBadge.textContent=n;cartBadge.cla
 function renderCart(){const box=document.getElementById('cartItems');
   if(!cart.length){box.innerHTML='<div class="empty">Tu carrito está vacío.<br>Pídele una recomendación al buscador 📚</div>';}
   else{box.innerHTML=cart.map(i=>{const b=byId(i.id);return `<div class="ci"><div class="ci-cover" style="${coverStyle(b)}"></div>
-    <div class="ci-info"><div class="ci-title">${esc(b.titulo)}</div><div class="ci-author">${esc(b.autor)}</div>
+    <div class="ci-info"><div class="ci-title">${esc(b.titulo)}${isPromo(b)?'<span class="ci-promo">3x2</span>':''}</div><div class="ci-author">${esc(b.autor)}</div>
     <div class="ci-bottom"><div class="qty"><button data-m="${b.id}">−</button><span>${i.qty}</span><button data-p="${b.id}">+</button></div><span class="ci-price">${fmtCOP(b.precio*i.qty)}</span></div></div></div>`;}).join("");
     box.querySelectorAll('[data-m]').forEach(x=>x.onclick=()=>setQty(x.dataset.m,-1));
     box.querySelectorAll('[data-p]').forEach(x=>x.onclick=()=>setQty(x.dataset.p,1));}
-  document.getElementById('cartSubtotal').textContent=fmtCOP(cartSubtotal());
+  const sub=cartSubtotal(),pc=promoCalc();
+  document.getElementById('cartSubtotal').textContent=fmtCOP(sub);
+  const pr=document.getElementById('promoRow');
+  if(pc.discount>0){pr.style.display='';document.getElementById('promoLabel').textContent='Promo 3x2 · '+pc.free+(pc.free>1?' libros gratis':' libro gratis');document.getElementById('cartDiscount').textContent='−'+fmtCOP(pc.discount);}
+  else pr.style.display='none';
+  document.getElementById('totalRow').style.display=cart.length?'':'none';
+  document.getElementById('cartTotal').textContent=fmtCOP(sub-pc.discount);
+  const note=document.getElementById('promoNote'),rem=pc.count%3;
+  if(pc.count>0&&rem!==0){const need=3-rem;note.style.display='';note.textContent=`Agrega ${need} libro${need>1?'s':''} de la promo 3x2 y el más barato te sale gratis.`;}else note.style.display='none';
   document.getElementById('goCheckout').disabled=!cart.length;
   document.getElementById('buyNow').disabled=!cart.length;}
 const backdrop=document.getElementById('backdrop'),drawer=document.getElementById('drawer');
@@ -780,10 +823,12 @@ document.querySelectorAll('#idSeg button').forEach(b=>b.onclick=()=>{
 });
 
 function renderSummary(){
-  document.getElementById('sumItems').innerHTML=cart.map(i=>{const b=byId(i.id);return `<div class="si"><div class="si-cover" style="${coverStyle(b)}"></div><div class="si-info"><div class="si-t">${esc(b.titulo)}</div><div class="si-q">Cantidad: ${i.qty}</div></div><div class="si-p">${fmtCOP(b.precio*i.qty)}</div></div>`;}).join("");
-  const sub=cartSubtotal();
+  document.getElementById('sumItems').innerHTML=cart.map(i=>{const b=byId(i.id);return `<div class="si"><div class="si-cover" style="${coverStyle(b)}"></div><div class="si-info"><div class="si-t">${esc(b.titulo)}${isPromo(b)?' <span class="ci-promo">3x2</span>':''}</div><div class="si-q">Cantidad: ${i.qty}</div></div><div class="si-p">${fmtCOP(b.precio*i.qty)}</div></div>`;}).join("");
+  const sub=cartSubtotal(),pc=promoCalc();
   document.getElementById('sumSub').textContent=fmtCOP(sub);
-  document.getElementById('sumTotal').textContent=fmtCOP(sub);
+  const sd=document.getElementById('sumDiscount');
+  if(sd){if(pc.discount>0){sd.style.display='';sd.querySelector('.v').textContent='−'+fmtCOP(pc.discount);}else sd.style.display='none';}
+  document.getElementById('sumTotal').textContent=fmtCOP(sub-pc.discount);
 }
 
 // Pago con Bold (prototipo: simulado)
@@ -841,6 +886,7 @@ document.getElementById('shopStatusX').onclick=()=>document.getElementById('shop
     if(j&&j.data&&j.data.products){
       await loadShopifyCatalog();
       showShopStatus(true,'✔ Conectado a Shopify ('+CATALOG.length+' productos cargados).');
+      loadPromoSet();
 
     }else{
       showShopStatus(false,'Shopify respondió <b>HTTP '+r.status+'</b>: '+(j?JSON.stringify(j.errors||j):txt).slice(0,220));
