@@ -485,24 +485,7 @@ document.getElementById('logoCheckout').src = LOGO_DARK;
 const STORES = ["Bukz Las Lomas","Bukz Viva Envigado","Bukz Mercados del Río","Bukz Museo de Antioquia","Bukz Bogotá 109"];
 document.getElementById('store').innerHTML = STORES.map(s=>`<option>${s}</option>`).join("");
 
-let CATALOG = [
-  { id:"1", titulo:"Cien años de soledad", autor:"Gabriel García Márquez", precio:65000, cat:"Clásicos", desc:"La saga de los Buendía en Macondo. Realismo mágico esencial.", color:"#C24B2B" },
-  { id:"2", titulo:"Las cosas que perdimos en el fuego", autor:"Mariana Enríquez", precio:49000, cat:"Terror", desc:"Cuentos de terror social en la Argentina contemporánea.", color:"#7A1F1F" },
-  { id:"3", titulo:"La perra", autor:"Pilar Quintana", precio:42000, cat:"Novela colombiana", desc:"Maternidad, pérdida y selva en el Pacífico colombiano.", color:"#3B5249" },
-  { id:"4", titulo:"El ruido de las cosas al caer", autor:"Juan Gabriel Vásquez", precio:52000, cat:"Novela colombiana", desc:"Bogotá, memoria y las cicatrices del narcotráfico.", color:"#2E4057" },
-  { id:"5", titulo:"Ficciones", autor:"Jorge Luis Borges", precio:58000, cat:"Clásicos", desc:"Laberintos, espejos y bibliotecas infinitas.", color:"#1F2A44" },
-  { id:"6", titulo:"Rayuela", autor:"Julio Cortázar", precio:60000, cat:"Clásicos", desc:"Una novela que se puede leer de muchas maneras.", color:"#4A2C5A" },
-  { id:"7", titulo:"Nuestra parte de noche", autor:"Mariana Enríquez", precio:72000, cat:"Terror", desc:"Una sociedad oscura, un padre y un hijo, una herencia maldita.", color:"#5C1A1A" },
-  { id:"8", titulo:"Pedro Páramo", autor:"Juan Rulfo", precio:38000, cat:"Clásicos", desc:"Un pueblo de muertos que susurran. Breve e inolvidable.", color:"#6B5333" },
-  { id:"9", titulo:"Hábitos atómicos", autor:"James Clear", precio:55000, cat:"Desarrollo personal", desc:"Pequeños cambios, resultados extraordinarios.", color:"#2B6E5E" },
-  { id:"10", titulo:"El infinito en un junco", autor:"Irene Vallejo", precio:69000, cat:"Ensayo", desc:"La historia de la invención de los libros. Hermoso.", color:"#8A5A2B" },
-  { id:"11", titulo:"Temporada de huracanes", autor:"Fernanda Melchor", precio:47000, cat:"Novela", desc:"Una bruja muerta, un pueblo y una prosa imparable.", color:"#3F2A2A" },
-  { id:"12", titulo:"Vista desde una acera", autor:"Pilar Quintana", precio:45000, cat:"Novela colombiana", desc:"Relatos de infancia, deseo y los bordes de la ciudad.", color:"#445A3B" },
-  { id:"13", titulo:"El principito", autor:"Antoine de Saint-Exupéry", precio:32000, cat:"Infantil", desc:"Un clásico para regalar a cualquier edad.", color:"#2E5A7A" },
-  { id:"14", titulo:"Mujercitas", autor:"Louisa May Alcott", precio:40000, cat:"Clásicos", desc:"Las hermanas March, perfecto para regalar.", color:"#7A4A5A" },
-  { id:"15", titulo:"Sapiens", autor:"Yuval Noah Harari", precio:78000, cat:"Ensayo", desc:"De animales a dioses: una historia de la humanidad.", color:"#8A6A2B" },
-  { id:"16", titulo:"Distancia de rescate", autor:"Samanta Schweblin", precio:41000, cat:"Terror", desc:"Una novela inquietante sobre el miedo y la maternidad.", color:"#3A4A4A" }
-];
+let CATALOG = [];   // se llena solo con productos reales de Shopify (loadShopifyCatalog)
 const seen = {};
 const byId = id => CATALOG.find(b=>b.id===String(id)) || seen[String(id)];
 const fmtCOP = n => "$" + n.toLocaleString("es-CO",{maximumFractionDigits:0});
@@ -576,7 +559,7 @@ function localSearch(query){
   if(priceSort)books=books.slice().sort((a,c)=>a.precio-c.precio); books=books.slice(0,6);
   let suggestions=[];
   if(books.length){const cats=[...new Set(books.map(b=>b.cat))];suggestions=["Más económicos","Solo colombianos"];if(!cats.includes("Terror"))suggestions.push("Algo de terror");suggestions=suggestions.slice(0,3);}
-  if(books.length===0){const d=CATALOG.slice(0,4);return{reply:"No encontré algo exacto con eso, pero échale un ojo a estos que siempre gustan:",books:d,suggestions:["Terror latinoamericano","Clásicos imprescindibles","Algo para regalar"]};}
+  if(books.length===0){const d=CATALOG.slice(0,4);if(!d.length)return{reply:"No encontré ese en la tienda. Prueba con otro título, autor o tema.",books:[],suggestions:["Novedades","Clásicos","Para regalar"]};return{reply:"No encontré algo exacto con eso, pero échale un ojo a estos que siempre gustan:",books:d,suggestions:["Novedades","Para regalar","Solo colombianos"]};}
   return {reply:intentReply,books,suggestions};
 }
 async function aiSearch(history){const r=await fetch(CONFIG.CHAT_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:history})});const d=await r.json();return{reply:d.reply,books:(d.bookIds||[]).map(byId).filter(Boolean),suggestions:d.suggestions||[]};}
