@@ -450,6 +450,24 @@ async function loadShopifyCatalog(){
   }catch(e){console.warn('No se pudo cargar el catálogo de Shopify:',e);}
   return false;
 }
+function shopifyReady(){const sh=CONFIG.SHOPIFY;return !!(sh&&sh.domain&&!sh.domain.startsWith("tu-tienda")&&sh.storefrontToken);}
+async function shopifySearch(text){
+  const sh=CONFIG.SHOPIFY;
+  const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
+  const query=`query($q:String!){products(first:9,query:$q){edges{node{id title handle vendor productType description(truncateAt:220) featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id}}}}}}}`;
+  const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query,variables:{q:text}})});
+  const j=await r.json();
+  if(!j.data||!j.data.products){console.warn('Shopify:',j.errors||j);return [];}
+  return j.data.products.edges.map(e=>mapProduct(e.node));
+}
+function friendlyReply(q){const s=norm(q);
+  if(/(terror|miedo|horror)/.test(s))return"Si te late el terror, mira esto:";
+  if(/(regalo|regalar|obsequio|cumple)/.test(s))return"Para regalar, estas son buenas apuestas:";
+  if(/(colombian|colombia)/.test(s))return"Talento colombiano para ti:";
+  if(/(clasic|imprescindible)/.test(s))return"Clásicos que no fallan:";
+  if(/(barat|economic|precio)/.test(s))return"Te las ordeno por precio:";
+  return"Mira lo que encontré para ti:";}
+function chipsFor(books){const cats=[...new Set(books.map(b=>b.cat))].filter(Boolean).slice(0,3);return cats.length?cats:["Novedades","Clásicos","Para regalar"];}
 
 /* ─────────── Búsqueda ─────────── */
 function localSearch(query){
@@ -474,6 +492,17 @@ function localSearch(query){
   return {reply:intentReply,books,suggestions};
 }
 async function aiSearch(history){const r=await fetch(CONFIG.CHAT_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:history})});const d=await r.json();return{reply:d.reply,books:(d.bookIds||[]).map(byId).filter(Boolean),suggestions:d.suggestions||[]};}
+async function runSearch(q){
+  if(CONFIG.CHAT_ENDPOINT) return aiSearch(history.map(m=>({role:m.role,content:m.text})));
+  if(shopifyReady()){
+    let books=[]; try{ books=await shopifySearch(q); }catch(e){ console.warn('Búsqueda Shopify:',e); }
+    if(/(barat|economic|precio|menos de)/.test(norm(q))) books=books.slice().sort((a,b)=>a.precio-b.precio);
+    if(books.length) return { reply:friendlyReply(q), books, suggestions:chipsFor(books) };
+    return { reply:"Mmm, no encontré ese en la tienda. Prueba con otro título, autor o tema.", books:[], suggestions:["Novedades","Clásicos","Para regalar"] };
+  }
+  await new Promise(r=>setTimeout(r,450));
+  return localSearch(q);
+}
 
 /* ─────────── UI chat ─────────── */
 const app=document.getElementById('app'),thread=document.getElementById('thread'),scroll=document.getElementById('scroll'),heroInput=document.getElementById('heroInput'),chatInput=document.getElementById('chatInput');
@@ -499,7 +528,7 @@ function addBot(reply,books,suggestions){const e=document.createElement('div');e
   toBottom();}
 function toBottom(){requestAnimationFrame(()=>{scroll.scrollTop=scroll.scrollHeight;});}
 async function ask(raw){const q=(raw||"").trim();if(!q||busy)return;busy=true;app.classList.add('chat-mode');history.push({role:"user",text:q});addUser(q);heroInput.value="";chatInput.value="";addLoading();
-  let res;try{if(CONFIG.CHAT_ENDPOINT){res=await aiSearch(history.map(m=>({role:m.role,content:m.text})));}else{await new Promise(r=>setTimeout(r,550));res=localSearch(q);}}catch(e){res={reply:"Uy, se me enredó la conexión. ¿Lo intentamos otra vez?",books:[],suggestions:[]};}
+  let res;try{res=await runSearch(q);}catch(e){res={reply:"Uy, se me enredó la conexión. ¿Lo intentamos otra vez?",books:[],suggestions:[]};}
   document.getElementById('loadingMsg')?.remove();history.push({role:"assistant",text:res.reply});addBot(res.reply,res.books,res.suggestions);busy=false;chatInput.focus();}
 heroInput.focus();
 
