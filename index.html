@@ -69,7 +69,7 @@
   .msg-user .bubble{background:var(--soft);color:#3a382f;border-radius:20px 20px 6px 20px;padding:11px 18px;font-size:15px;font-weight:500;line-height:1.4}
   .msg-bot{align-self:flex-start;width:100%}
   .msg-bot .txt{color:rgba(255,255,255,.82);font-size:15.5px;line-height:1.55;max-width:80%}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(184px,1fr));gap:18px;margin-top:18px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(184px,1fr));gap:18px;margin-top:18px;align-items:start}
   .chips{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}
   .chip{background:transparent;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);border-radius:999px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap;transition:all .16s ease}
   .chip:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.32);color:#fff}
@@ -85,6 +85,26 @@
   .meta .cat{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.4px;color:#a3a299}
   .meta .title{font-size:15px;font-weight:600;line-height:1.2;color:var(--ink)}
   .meta .author{font-size:12.5px;color:#8a8a82;margin-top:-3px}
+  .stock{position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;letter-spacing:.3px;padding:4px 9px;border-radius:999px;backdrop-filter:blur(4px)}
+  .stock.in{background:rgba(34,55,34,.62);color:#9be29b}
+  .stock.out{background:rgba(60,38,34,.7);color:#ffb3a0}
+  .add-btn.out{background:#efefe9;color:#a3a299;border-color:#e6e5df;cursor:default}
+  .more{margin-top:2px;background:none;border:none;color:#86857c;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;padding:4px 0}
+  .more:hover{color:var(--ink)}
+  .more .arr{transition:transform .25s ease}
+  .more.open .arr{transform:rotate(180deg)}
+  .details{max-height:0;overflow:hidden;transition:max-height .35s ease}
+  .details.open{max-height:520px}
+  .d-desc{font-size:12.5px;line-height:1.55;color:#5a5a52;margin:4px 0 14px}
+  .d-desc.d-muted{color:#a3a299}
+  .d-h{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#a3a299;margin-bottom:9px}
+  .d-list{display:flex;flex-direction:column;gap:7px}
+  .d-store{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#4a4a44}
+  .d-store .sav{margin-left:auto;font-size:11px;font-weight:600;color:#5fa05f}
+  .d-store .sav.no{color:#b06a5a}
+  .sdot{width:8px;height:8px;border-radius:50%;background:#d2d2cb;flex:none}
+  .sdot.on{background:#5fb85f}
+  .d-note{font-size:12px;color:#a3a299}
   .meta .foot{display:flex;align-items:center;justify-content:space-between}
   .meta .price{font-size:17px;font-weight:600;color:var(--ink)}
   .add-btn{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink);background:#f4f3ee;border:1px solid #e6e5df;border-radius:999px;padding:7px 13px;cursor:pointer;transition:all .15s ease}
@@ -443,13 +463,13 @@ function mapProduct(n){
   return { id:n.handle||n.id, titulo:n.title, autor:n.vendor||"", precio:Math.round(amt),
     cat:n.productType||"Libros", desc:(n.description||"").trim(),
     image:n.featuredImage?n.featuredImage.url:"", url:(CONFIG.SHOPIFY.productUrlBase||"")+(n.handle||""),
-    variantId:(n.variants&&n.variants.edges[0])?n.variants.edges[0].node.id:"", color:pickColor(n.handle||n.title||"x") };
+    variantId:(n.variants&&n.variants.edges[0])?n.variants.edges[0].node.id:"", available:(n.availableForSale!==false), color:pickColor(n.handle||n.title||"x") };
 }
 async function loadShopifyCatalog(){
   const sh=CONFIG.SHOPIFY;
   if(!sh||!sh.domain||sh.domain.startsWith("tu-tienda")||!sh.storefrontToken) return false;
   const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
-  const query=`query($cursor:String){products(first:50,after:$cursor,sortKey:BEST_SELLING){pageInfo{hasNextPage endCursor}edges{node{id title handle vendor productType description(truncateAt:220) featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id}}}}}}}`;
+  const query=`query($cursor:String){products(first:50,after:$cursor,sortKey:BEST_SELLING){pageInfo{hasNextPage endCursor}edges{node{id title handle vendor productType description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id}}}}}}}`;
   let cursor=null,all=[],pages=0;
   try{
     do{
@@ -467,7 +487,7 @@ function shopifyReady(){const sh=CONFIG.SHOPIFY;return !!(sh&&sh.domain&&!sh.dom
 async function shopifySearch(text){
   const sh=CONFIG.SHOPIFY;
   const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
-  const query=`query($q:String!){products(first:9,query:$q){edges{node{id title handle vendor productType description(truncateAt:220) featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id}}}}}}}`;
+  const query=`query($q:String!){products(first:9,query:$q){edges{node{id title handle vendor productType description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id}}}}}}}`;
   const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query,variables:{q:text}})});
   const j=await r.json();
   if(!j.data||!j.data.products){console.warn('Shopify:',j.errors||j);return [];}
@@ -526,10 +546,41 @@ heroInput.addEventListener('keydown',e=>{if(e.key==='Enter')ask(heroInput.value)
 chatInput.addEventListener('keydown',e=>{if(e.key==='Enter')ask(chatInput.value);});
 document.getElementById('resetBtn').addEventListener('click',()=>{history=[];thread.innerHTML="";app.classList.remove('chat-mode');heroInput.value="";heroInput.focus();});
 
-function cardHTML(b){return `<div class="card" data-id="${b.id}">
-  <div class="cover" style="${coverStyle(b)}">${b.image?'':'<span class="mark">BUKZ</span>'}</div>
-  <div class="meta"><span class="cat">${esc(b.cat)}</span><div class="title">${esc(b.titulo)}</div>${b.autor?`<div class="author">${esc(b.autor)}</div>`:''}<div class="foot"><span class="price">${fmtCOP(b.precio)}</span>
-  <button class="add-btn" data-add="${b.id}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span class="add-lbl">Agregar</span></button></div></div></div>`;}
+function cardHTML(b){const av=b.available!==false;return `<div class="card" data-id="${b.id}">
+  <div class="cover" style="${coverStyle(b)}">${b.image?'':'<span class="mark">BUKZ</span>'}<span class="stock ${av?'in':'out'}">${av?'Disponible':'Agotado'}</span></div>
+  <div class="meta"><span class="cat">${esc(b.cat)}</span><div class="title">${esc(b.titulo)}</div>${b.autor?`<div class="author">${esc(b.autor)}</div>`:''}<div class="foot"><span class="price">${fmtCOP(b.precio)}</span>${av?`<button class="add-btn" data-add="${b.id}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span class="add-lbl">Agregar</span></button>`:`<button class="add-btn out" disabled>Agotado</button>`}</div>
+  <button class="more" data-toggle="1">Detalles<span class="arr">▾</span></button>
+  <div class="details"><p class="d-desc${b.desc?'':' d-muted'}">${b.desc?esc(b.desc):'Sin descripción disponible.'}</p><div class="d-stores"><span class="d-h">Disponibilidad en tiendas</span><div class="d-list"></div></div></div>
+  </div></div>`;}
+async function fetchStores(b){
+  const sh=CONFIG.SHOPIFY;
+  if(!shopifyReady()||!b||!b.variantId) return null;
+  const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
+  const query=`query($id:ID!){node(id:$id){... on ProductVariant{storeAvailability(first:12){edges{node{available location{name}}}}}}}`;
+  try{
+    const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query,variables:{id:b.variantId}})});
+    const j=await r.json();
+    const conn=j.data&&j.data.node&&j.data.node.storeAvailability;
+    if(!conn) return [];
+    return conn.edges.map(e=>({name:(e.node.location&&e.node.location.name)||'Tienda',available:!!e.node.available}));
+  }catch(e){console.warn('storeAvailability:',e);return [];}
+}
+async function toggleDetails(btn){
+  const card=btn.closest('.card'), panel=card.querySelector('.details');
+  const open=panel.classList.toggle('open'); btn.classList.toggle('open',open);
+  if(open && !panel.dataset.loaded){
+    panel.dataset.loaded='1';
+    const list=panel.querySelector('.d-list'), b=byId(card.dataset.id);
+    if(!shopifyReady()){ list.innerHTML='<div class="d-note">Conecta tu tienda para ver disponibilidad por sede.</div>'; return; }
+    list.innerHTML='<div class="d-note">Cargando disponibilidad…</div>';
+    const stores=await fetchStores(b);
+    if(stores&&stores.length){
+      list.innerHTML=stores.map(s=>`<div class="d-store"><span class="sdot ${s.available?'on':''}"></span>${esc(s.name)}<span class="sav ${s.available?'':'no'}">${s.available?'Disponible':'Agotado'}</span></div>`).join("");
+    }else{
+      list.innerHTML='<div class="d-note">Este libro no tiene retiro en tienda configurado en Shopify.</div>';
+    }
+  }
+}
 function addUser(t){const e=document.createElement('div');e.className='msg-user fade';e.innerHTML=`<div class="bubble">${esc(t)}</div>`;thread.appendChild(e);toBottom();}
 function addLoading(){const e=document.createElement('div');e.className='msg-bot';e.id='loadingMsg';const sk='<div class="sk"><div class="shimmer" style="aspect-ratio:3/4"></div><div class="shimmer" style="height:11px;width:50%"></div><div class="shimmer" style="height:15px;width:80%"></div></div>';e.innerHTML=`<div class="txt" style="margin-bottom:18px"><span class="dots">Buscando en el catálogo</span></div><div class="grid">${sk.repeat(3)}</div>`;thread.appendChild(e);toBottom();}
 function addBot(reply,books,suggestions){(books||[]).forEach(b=>{if(b&&b.id)seen[b.id]=b;});const e=document.createElement('div');e.className='msg-bot';let h=`<div class="txt fade">${esc(reply)}</div>`;
@@ -538,6 +589,7 @@ function addBot(reply,books,suggestions){(books||[]).forEach(b=>{if(b&&b.id)seen
   e.innerHTML=h;thread.appendChild(e);
   e.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>ask(c.dataset.q)));
   e.querySelectorAll('[data-add]').forEach(btn=>btn.addEventListener('click',()=>addToCart(btn.dataset.add,btn)));
+  e.querySelectorAll('[data-toggle]').forEach(btn=>btn.addEventListener('click',()=>toggleDetails(btn)));
   toBottom();}
 function toBottom(){requestAnimationFrame(()=>{scroll.scrollTop=scroll.scrollHeight;});}
 async function ask(raw){const q=(raw||"").trim();if(!q||busy)return;busy=true;app.classList.add('chat-mode');history.push({role:"user",text:q});addUser(q);heroInput.value="";chatInput.value="";addLoading();
