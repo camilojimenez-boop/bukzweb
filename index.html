@@ -318,6 +318,9 @@
   .sp-card .cm{display:inline-block;font-size:9px;font-weight:800;letter-spacing:2px;color:rgba(245,225,0,.85);padding:8px}
   .sp-card .t{font-size:12.5px;font-weight:600;color:#eee;margin-top:8px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .sp-card .p{font-size:12px;font-weight:700;color:#bdbab0;margin-top:3px}
+  .ver-mas{display:block;margin:22px auto 4px;font-family:inherit;font-size:14px;font-weight:600;color:rgba(255,255,255,.85);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:11px 26px;cursor:pointer;transition:all .16s ease}
+  .ver-mas:hover{background:rgba(242,232,92,.14);border-color:rgba(242,232,92,.5);color:#fff}
+  .ver-mas.loading{opacity:.6;cursor:default}
 </style>
 </head>
 <body>
@@ -682,13 +685,18 @@ document.getElementById('pmBackdrop').onclick=()=>pmShow(false);
 document.addEventListener('keydown',e=>{if(e.key==='Escape')pmShow(false);});
 function addUser(t){const e=document.createElement('div');e.className='msg-user fade';e.innerHTML=`<div class="bubble">${esc(t)}</div>`;thread.appendChild(e);return e;}
 function addLoading(){const e=document.createElement('div');e.className='msg-bot';e.id='loadingMsg';const sk='<div class="sk"><div class="shimmer" style="aspect-ratio:3/4"></div><div class="shimmer" style="height:11px;width:50%"></div><div class="shimmer" style="height:15px;width:80%"></div></div>';e.innerHTML=`<div class="txt" style="margin-bottom:18px"><span class="dots">Buscando en el catálogo</span></div><div class="grid">${sk.repeat(3)}</div>`;thread.appendChild(e);}
+function wireCards(scope){
+  scope.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>ask(c.dataset.q)));
+  scope.querySelectorAll('[data-add]').forEach(btn=>btn.addEventListener('click',()=>addToCart(btn.dataset.add,btn)));
+  scope.querySelectorAll('[data-modal]').forEach(btn=>btn.addEventListener('click',()=>openModal(byId(btn.dataset.modal))));
+}
+function appendBooks(grid,books){if(!grid)return;books.forEach(b=>{if(b&&b.id)seen[b.id]=b;});books.forEach((b,i)=>{const wrap=document.createElement('div');wrap.className='pop';wrap.style.animationDelay=(i*60)+'ms';wrap.innerHTML=cardHTML(b);grid.appendChild(wrap);wireCards(wrap);});}
 function addBot(reply,books,suggestions){(books||[]).forEach(b=>{if(b&&b.id)seen[b.id]=b;});const e=document.createElement('div');e.className='msg-bot';const base=150;let h=`<div class="txt fade">${esc(reply)}</div>`;
   if(books&&books.length)h+=`<div class="grid">${books.map((b,i)=>`<div class="pop" style="animation-delay:${base+i*90}ms">${cardHTML(b)}</div>`).join("")}</div>`;
   if(suggestions&&suggestions.length){const cd=base+(books?books.length:0)*90+140;h+=`<div class="chips fade" style="animation-delay:${cd}ms">${suggestions.map(s=>`<button class="chip" data-q="${esc(s)}">${esc(s)}</button>`).join("")}</div>`;}
   e.innerHTML=h;thread.appendChild(e);
-  e.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>ask(c.dataset.q)));
-  e.querySelectorAll('[data-add]').forEach(btn=>btn.addEventListener('click',()=>addToCart(btn.dataset.add,btn)));
-  e.querySelectorAll('[data-modal]').forEach(btn=>btn.addEventListener('click',()=>openModal(byId(btn.dataset.modal))));
+  wireCards(e);
+  return e;
   }
 function scrollToEl(el){if(!el)return;requestAnimationFrame(()=>{const top=el.getBoundingClientRect().top-scroll.getBoundingClientRect().top+scroll.scrollTop-8;scroll.scrollTo({top:Math.max(0,top),behavior:'smooth'});});}
 async function ask(raw){const q=(raw||"").trim();if(!q||busy)return;busy=true;app.classList.add('chat-mode');history.push({role:"user",text:q});const uEl=addUser(q);heroInput.value="";chatInput.value="";addLoading();scrollToEl(uEl);
@@ -864,10 +872,21 @@ async function sfProducts(opts){
   const query='{products('+args.join(',')+'){edges{node{'+node+'}}}}';
   try{const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query})});const j=await r.json();if(!j.data||!j.data.products){console.warn('home:',j.errors||j);return [];}return j.data.products.edges.map(e=>mapProduct(e.node));}catch(e){console.warn('sfProducts:',e);return [];}
 }
+async function sfCollectionPage(handle,cursor,n){
+  const sh=CONFIG.SHOPIFY; if(!shopifyReady())return {books:[],cursor:null,hasNext:false};
+  const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
+  const node='id title handle vendor productType tags description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id price{amount} compareAtPrice{amount}}}}';
+  const q=`query($c:String){collection(handle:${JSON.stringify(handle)}){products(first:${n||24},after:$c){pageInfo{hasNextPage endCursor}edges{node{${node}}}}}}`;
+  try{
+    const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query:q,variables:{c:cursor||null}})});
+    const j=await r.json();const c=j.data&&j.data.collection;
+    if(!c||!c.products){console.warn('colección:',j.errors||j);return {books:[],cursor:null,hasNext:false};}
+    return {books:c.products.edges.map(e=>mapProduct(e.node)),cursor:c.products.pageInfo.endCursor,hasNext:c.products.pageInfo.hasNextPage};
+  }catch(e){console.warn('sfCollectionPage:',e);return {books:[],cursor:null,hasNext:false};}
+}
 async function sectionBooks(kind){
   if(kind==='mes'){const tag=(CONFIG.PANEL&&CONFIG.PANEL.libroDelMesTag)||'Libro del mes';return await sfProducts({query:"tag:'"+tag+"'",n:18});}
   if(kind==='nuevos'){return await sfProducts({sortKey:'CREATED_AT',reverse:true,n:18});}
-  if(kind==='promos'){const promoTag=CONFIG.PANEL&&CONFIG.PANEL.promoTag;if(promoTag)return await sfProducts({query:"tag:'"+promoTag+"'",n:18});const base=await sfProducts({sortKey:'BEST_SELLING',n:60});return base.filter(p=>p.compareAt&&p.compareAt>p.precio).slice(0,18);}
   return [];
 }
 async function showSection(kind){
@@ -875,11 +894,35 @@ async function showSection(kind){
   app.classList.add('chat-mode');
   const labels={mes:'Libros del mes',nuevos:'Novedades',promos:'Promos del mes'};
   const replies={mes:'Estos son los libros del mes',nuevos:'Lo más nuevo que acaba de llegar',promos:'Promos del mes'};
+  const empty='Por ahora no hay nada en esta sección. Prueba con una búsqueda o escríbenos por WhatsApp.';
   history.push({role:'user',text:labels[kind]});
   const uEl=addUser(labels[kind]);addLoading();scrollToEl(uEl);
+
+  if(kind==='promos'){
+    const handle=(CONFIG.PANEL&&CONFIG.PANEL.promoCollection)||'editorial-planeta';
+    let page;try{page=await sfCollectionPage(handle,null,24);}catch(e){page={books:[],cursor:null,hasNext:false};}
+    const lm=document.getElementById('loadingMsg');if(lm){lm.classList.add('fade-out');await new Promise(r=>setTimeout(r,200));lm.remove();}
+    const reply=page.books.length?replies.promos:empty;
+    history.push({role:'assistant',text:reply});
+    const msgEl=addBot(reply,page.books,[]);
+    if(page.hasNext){
+      const grid=msgEl.querySelector('.grid');
+      const more=document.createElement('button');more.className='ver-mas';more.textContent='Ver más';
+      let cursor=page.cursor,loading=false;
+      more.addEventListener('click',async()=>{
+        if(loading)return;loading=true;more.textContent='Cargando…';more.classList.add('loading');
+        const np=await sfCollectionPage(handle,cursor,24);
+        appendBooks(grid,np.books);cursor=np.cursor;
+        if(np.hasNext){more.textContent='Ver más';more.classList.remove('loading');loading=false;}else{more.remove();}
+      });
+      msgEl.appendChild(more);
+    }
+    scrollToEl(uEl);busy=false;return;
+  }
+
   let books=[];try{books=await sectionBooks(kind);}catch(e){}
   const lm=document.getElementById('loadingMsg');if(lm){lm.classList.add('fade-out');await new Promise(r=>setTimeout(r,200));lm.remove();}
-  const reply=books.length?replies[kind]:'Por ahora no hay nada en esta sección. Prueba con una búsqueda o escríbenos por WhatsApp.';
+  const reply=books.length?replies[kind]:empty;
   history.push({role:'assistant',text:reply});
   addBot(reply,books,[]);scrollToEl(uEl);busy=false;
 }
