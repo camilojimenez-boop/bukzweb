@@ -127,8 +127,9 @@
   @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
   .dots::after{content:"…";animation:blink 1.3s infinite} @keyframes blink{0%,100%{opacity:.3}50%{opacity:1}}
   @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}} .rise{animation:rise .7s cubic-bezier(.2,.7,.2,1) both}
-  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}} .fade{animation:fade .4s ease both}
-  @keyframes pop{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}} .pop{animation:pop .45s cubic-bezier(.2,.7,.2,1) both}
+  @keyframes fade{from{opacity:0;transform:translateY(8px);filter:blur(4px)}to{opacity:1;transform:none;filter:blur(0)}} .fade{animation:fade .5s cubic-bezier(.2,.7,.2,1) both}
+  @keyframes pop{from{opacity:0;transform:translateY(14px) scale(.985);filter:blur(5px)}to{opacity:1;transform:none;filter:blur(0)}} .pop{animation:pop .55s cubic-bezier(.2,.7,.2,1) both}
+  @keyframes fadeOut{to{opacity:0;transform:translateY(-4px);filter:blur(3px)}} .fade-out{animation:fadeOut .22s ease forwards}
   @keyframes appShow{from{opacity:0;filter:blur(16px)}to{opacity:1;filter:blur(0)}}
 
   /* Intro splash */
@@ -136,7 +137,7 @@
   .intro-logo{height:66px;width:auto;animation:introZoom 1.5s cubic-bezier(.2,.7,.2,1) both}
   @keyframes introZoom{from{transform:scale(.93)}to{transform:scale(1)}}
   @keyframes introOut{to{opacity:0;visibility:hidden}}
-  @media (prefers-reduced-motion:reduce){#app{animation:none}.rise,.fade,.pop,.intro-logo,.glow,.glow2{animation:none}#intro{display:none}.greeting,.hero-wrap>div{animation-delay:0ms!important}}
+  @media (prefers-reduced-motion:reduce){#app{animation:none}.rise,.fade,.pop,.fade-out,.intro-logo,.glow,.glow2{animation:none}#intro{display:none}.greeting,.hero-wrap>div{animation-delay:0ms!important}}
 
   /* ── CARRITO (drawer) ── */
   .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity .3s;z-index:50}
@@ -590,17 +591,19 @@ async function runSearch(q){
   if(CONFIG.CHAT_ENDPOINT){
     let candidates=[];
     if(shopifyReady()){ try{ candidates=await shopifySearch(cleanQuery(q)); }catch(e){} }
-    if(!candidates.length){ try{ candidates=localSearch(q).books||[]; }catch(e){} }   // respaldo: catálogo ya cargado
+    if(!candidates.length){ try{ candidates=(localSearch(q).books)||[]; }catch(e){} }   // respaldo: catálogo ya cargado
+    if(/(barat|econ[oó]mic|precio|menos de)/.test(norm(q))) candidates=candidates.slice().sort((a,b)=>a.precio-b.precio);
+    const books=candidates.slice(0,8);   // ← el BUSCADOR NATIVO decide qué se muestra
     try{
       const r=await fetch(CONFIG.CHAT_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
         messages: history.map(m=>({role:m.role,content:m.text})),
-        candidates: candidates.map(b=>({handle:b.id,titulo:b.titulo,autor:b.autor,precio:b.precio,cat:b.cat,available:b.available,desc:(b.desc||'').slice(0,180)}))
+        candidates: books.map(b=>({handle:b.id,titulo:b.titulo,autor:b.autor,precio:b.precio,cat:b.cat,available:b.available,desc:(b.desc||'').slice(0,180)}))
       })});
       const d=await r.json();
-      const show=d.show||d.bookIds||[];
-      const books=show.map(h=>candidates.find(b=>b.id===String(h))).filter(Boolean);
-      return { reply:d.reply||"¿En qué más te ayudo?", books, suggestions:d.suggestions||[] };
-    }catch(e){ console.warn('Backend IA:',e); }   // si falla, cae a búsqueda directa
+      // Sonnet SOLO acompaña con el texto; los libros mostrados son los del buscador nativo
+      return { reply:d.reply||friendlyReply(q), books, suggestions:(d.suggestions&&d.suggestions.length)?d.suggestions:chipsFor(books) };
+    }catch(e){ console.warn('Backend IA:',e); }   // si la IA falla, igual mostramos los resultados nativos
+    if(books.length) return { reply:friendlyReply(q), books, suggestions:chipsFor(books) };
   }
   // ── Sin backend de IA: búsqueda directa en Shopify ──
   if(shopifyReady()){
@@ -668,18 +671,19 @@ document.getElementById('pmBackdrop').onclick=()=>pmShow(false);
 document.addEventListener('keydown',e=>{if(e.key==='Escape')pmShow(false);});
 function addUser(t){const e=document.createElement('div');e.className='msg-user fade';e.innerHTML=`<div class="bubble">${esc(t)}</div>`;thread.appendChild(e);toBottom();}
 function addLoading(){const e=document.createElement('div');e.className='msg-bot';e.id='loadingMsg';const sk='<div class="sk"><div class="shimmer" style="aspect-ratio:3/4"></div><div class="shimmer" style="height:11px;width:50%"></div><div class="shimmer" style="height:15px;width:80%"></div></div>';e.innerHTML=`<div class="txt" style="margin-bottom:18px"><span class="dots">Buscando en el catálogo</span></div><div class="grid">${sk.repeat(3)}</div>`;thread.appendChild(e);toBottom();}
-function addBot(reply,books,suggestions){(books||[]).forEach(b=>{if(b&&b.id)seen[b.id]=b;});const e=document.createElement('div');e.className='msg-bot';let h=`<div class="txt fade">${esc(reply)}</div>`;
-  if(books&&books.length)h+=`<div class="grid">${books.map((b,i)=>`<div class="pop" style="animation-delay:${i*70}ms">${cardHTML(b)}</div>`).join("")}</div>`;
-  if(suggestions&&suggestions.length)h+=`<div class="chips">${suggestions.map(s=>`<button class="chip" data-q="${esc(s)}">${esc(s)}</button>`).join("")}</div>`;
+function addBot(reply,books,suggestions){(books||[]).forEach(b=>{if(b&&b.id)seen[b.id]=b;});const e=document.createElement('div');e.className='msg-bot';const base=150;let h=`<div class="txt fade">${esc(reply)}</div>`;
+  if(books&&books.length)h+=`<div class="grid">${books.map((b,i)=>`<div class="pop" style="animation-delay:${base+i*90}ms">${cardHTML(b)}</div>`).join("")}</div>`;
+  if(suggestions&&suggestions.length){const cd=base+(books?books.length:0)*90+140;h+=`<div class="chips fade" style="animation-delay:${cd}ms">${suggestions.map(s=>`<button class="chip" data-q="${esc(s)}">${esc(s)}</button>`).join("")}</div>`;}
   e.innerHTML=h;thread.appendChild(e);
   e.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>ask(c.dataset.q)));
   e.querySelectorAll('[data-add]').forEach(btn=>btn.addEventListener('click',()=>addToCart(btn.dataset.add,btn)));
   e.querySelectorAll('[data-modal]').forEach(btn=>btn.addEventListener('click',()=>openModal(byId(btn.dataset.modal))));
   toBottom();}
-function toBottom(){requestAnimationFrame(()=>{scroll.scrollTop=scroll.scrollHeight;});}
+function toBottom(){requestAnimationFrame(()=>{scroll.scrollTo({top:scroll.scrollHeight,behavior:'smooth'});});}
 async function ask(raw){const q=(raw||"").trim();if(!q||busy)return;busy=true;app.classList.add('chat-mode');history.push({role:"user",text:q});addUser(q);heroInput.value="";chatInput.value="";addLoading();
   let res;try{res=await runSearch(q);}catch(e){res={reply:"Uy, se me enredó la conexión. ¿Lo intentamos otra vez?",books:[],suggestions:[]};}
-  document.getElementById('loadingMsg')?.remove();history.push({role:"assistant",text:res.reply});addBot(res.reply,res.books,res.suggestions);busy=false;chatInput.focus();}
+  const lm=document.getElementById('loadingMsg');if(lm){lm.classList.add('fade-out');await new Promise(r=>setTimeout(r,200));lm.remove();}
+  history.push({role:"assistant",text:res.reply});addBot(res.reply,res.books,res.suggestions);busy=false;chatInput.focus();}
 heroInput.focus();
 
 /* ─────────── CARRITO ─────────── */
