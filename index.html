@@ -319,9 +319,18 @@
   .ver-mas{display:block;margin:22px auto 4px;font-family:inherit;font-size:14px;font-weight:600;color:rgba(255,255,255,.85);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:11px 26px;cursor:pointer;transition:all .16s ease}
   .ver-mas:hover{background:rgba(242,232,92,.14);border-color:rgba(242,232,92,.5);color:#fff}
   .ver-mas.loading{opacity:.6;cursor:default}
-  .promo-head{background:linear-gradient(135deg,rgba(246,234,96,.16),rgba(246,234,96,.05));border:1px solid rgba(242,232,92,.35);border-radius:16px;padding:16px 20px;margin-bottom:20px}
-  .promo-head .pt{font-size:17px;font-weight:800;color:#F2E85C;letter-spacing:.2px}
+  .promo-head{background:color-mix(in srgb, var(--pc,#F2E85C) 13%, transparent);border:1px solid color-mix(in srgb, var(--pc,#F2E85C) 45%, transparent);border-radius:16px;padding:16px 20px;margin-bottom:20px}
+  .promo-head .pt{font-size:17px;font-weight:800;color:var(--pc,#F2E85C);letter-spacing:.2px}
   .promo-head .ps{font-size:14px;color:#e8e6df;margin-top:5px;line-height:1.45}
+  .promo-menu{display:flex;flex-wrap:wrap;gap:14px;margin-top:16px}
+  .promo-opt{flex:1 1 220px;min-width:200px;background:rgba(255,255,255,.04);border:1px solid color-mix(in srgb, var(--pc,#888) 40%, transparent);border-left:4px solid var(--pc,#888);border-radius:14px;padding:15px 16px;display:flex;flex-direction:column;gap:8px}
+  .promo-opt-h{display:flex;align-items:center;gap:9px}
+  .promo-dot{width:10px;height:10px;border-radius:50%;background:var(--pc,#888);flex:none}
+  .promo-opt .po-t{font-size:15px;font-weight:700;color:#fff}
+  .promo-opt .po-s{font-size:12.5px;line-height:1.45;color:#bdbab0}
+  .po-btn{align-self:flex-start;margin-top:4px;font-family:inherit;font-size:13px;font-weight:700;color:#fff;background:var(--pc,#888);border:none;border-radius:999px;padding:9px 18px;cursor:pointer;transition:transform .14s ease,filter .14s ease}
+  .po-btn:hover{transform:translateY(-1px);filter:brightness(1.08)}
+  .card-promo{position:absolute;top:10px;left:10px;font-size:10px;font-weight:800;color:#fff;padding:3px 8px;border-radius:6px;letter-spacing:.3px;z-index:2;box-shadow:0 2px 8px rgba(0,0,0,.25)}
   .ci-promo{display:inline-block;margin-left:7px;font-size:10px;font-weight:800;letter-spacing:.4px;color:#3a382f;background:var(--soft);border-radius:5px;padding:1px 6px;vertical-align:middle}
   .promo-row .v{color:#2f7a2f;font-weight:700}
   .total-row .t{font-weight:700} .total-row .v{font-weight:800;font-size:16px}
@@ -512,8 +521,8 @@ const CONFIG = {
   WHATSAPP: "https://wa.link/0pqg73",   // enlace de atención al cliente por WhatsApp
   MES_COLLECTION: "libros-del-mes",     // colección de Shopify para el botón "Libros del mes"
   PROMOS: [
-    { key:"penguin", label:"Penguin 3x2", collection:"penguin-random-house", color:"#F97316", desc:"Compra 2 libros de Penguin Random House y lleva el tercero gratis." },
-    { key:"planeta", label:"Planeta 3x2", collection:"editorial-planeta",     color:"#2F6FED", desc:"Compra 2 libros de Planeta de Libros y lleva el tercero gratis." }
+    { key:"penguin", menuLabel:"3x2 Penguin Random House", badge:"Penguin 3x2", collection:"penguin-random-house", title:"Penguin Random House", color:"#F97316", desc:"Compra 2 libros de Penguin Random House y lleva el tercero gratis." },
+    { key:"planeta", menuLabel:"3x2 Planeta",               badge:"Planeta 3x2", collection:"editorial-planeta",     title:"Planeta de Libros",     color:"#2F6FED", desc:"Compra 2 libros de Planeta de Libros y lleva el tercero gratis." }
   ],
   // Producción: Bold necesita tu llave de comercio + firma de integridad (hash)
   // generada en backend. Siigo necesita su API (auth + crear factura) tras el pago.
@@ -672,8 +681,8 @@ heroInput.addEventListener('keydown',e=>{if(e.key==='Enter')ask(heroInput.value)
 chatInput.addEventListener('keydown',e=>{if(e.key==='Enter')ask(chatInput.value);});
 document.getElementById('resetBtn').addEventListener('click',()=>{history=[];thread.innerHTML="";app.classList.remove('chat-mode');heroInput.value="";heroInput.focus();});
 
-function cardHTML(b){const av=b.available!==false;return `<div class="card" data-id="${b.id}">
-  <div class="cover" style="${coverStyle(b)}">${b.image?'':'<span class="mark">BUKZ</span>'}<span class="stock ${av?'in':'out'}">${av?'Disponible':'Agotado'}</span></div>
+function cardHTML(b){const av=b.available!==false;const pr=b.promo||(typeof promoOf==='function'?promoOf(b):null);return `<div class="card" data-id="${b.id}">
+  <div class="cover" style="${coverStyle(b)}">${b.image?'':'<span class="mark">BUKZ</span>'}${pr?`<span class="card-promo" style="background:${pr.color}">${esc(pr.badge||'3x2')}</span>`:''}<span class="stock ${av?'in':'out'}">${av?'Disponible':'Agotado'}</span></div>
   <div class="meta"><span class="cat">${esc(b.cat)}</span><div class="title">${esc(b.titulo)}</div>${b.autor?`<div class="author">${esc(b.autor)}</div>`:''}<div class="foot"><span class="price">${fmtCOP(b.precio)}</span>${av?`<button class="add-btn" data-add="${b.id}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span class="add-lbl">Agregar</span></button>`:`<button class="add-btn out" disabled>Agotado</button>`}</div>
   <button class="more" data-modal="${b.id}">Ver detalles</button>
   </div></div>`;}
@@ -749,34 +758,52 @@ heroInput.focus();
 
 /* ─────────── CARRITO ─────────── */
 let cart=[]; // {id, qty}
-let PROMO_SET=new Set(); // handles de la colección en promo (3x2)
+let PROMO_SETS={}; // {key: Set(handles)}
 const cartBadge=document.getElementById('cartBadge');
-function isPromo(b){return !!(b&&PROMO_SET.has(b.id));}
+function promoOf(b){if(!b)return null;for(const p of (CONFIG.PROMOS||[])){const set=PROMO_SETS[p.key];if(set&&set.has(b.id))return p;}return null;}
+function isPromo(b){return !!promoOf(b);}
 function cartCount(){return cart.reduce((s,i)=>s+i.qty,0);}
 function cartSubtotal(){return cart.reduce((s,i)=>{const b=byId(i.id);return s+(b?b.precio*i.qty:0);},0);}
 function promoCalc(){
-  const units=[];
-  cart.forEach(i=>{const b=byId(i.id);if(isPromo(b)){for(let k=0;k<i.qty;k++)units.push(b.precio);}});
-  units.sort((a,b)=>a-b);
-  const free=Math.floor(units.length/3);
-  let discount=0;for(let k=0;k<free;k++)discount+=units[k];
-  return {discount,free,count:units.length};
+  const byKey={};
+  cart.forEach(i=>{const b=byId(i.id);const p=promoOf(b);if(p&&b){(byKey[p.key]=byKey[p.key]||[]);for(let k=0;k<i.qty;k++)byKey[p.key].push(b.precio);}});
+  let discount=0,free=0;const detail=[];
+  (CONFIG.PROMOS||[]).forEach(p=>{
+    const units=(byKey[p.key]||[]).slice().sort((a,b)=>a-b);
+    const f=Math.floor(units.length/3);let d=0;for(let k=0;k<f;k++)d+=units[k];
+    discount+=d;free+=f;
+    if(units.length)detail.push({promo:p,count:units.length,free:f,discount:d});
+  });
+  return {discount,free,detail};
 }
 function cartTotal(){return cartSubtotal()-promoCalc().discount;}
-async function loadPromoSet(){
-  if(!shopifyReady())return;
-  const sh=CONFIG.SHOPIFY;const handle=(CONFIG.PANEL&&CONFIG.PANEL.promoCollection)||'editorial-planeta';
+async function collectionHandles(handle){
+  const sh=CONFIG.SHOPIFY;const set=new Set();if(!shopifyReady()||!handle)return set;
   const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
   let cursor=null,guard=0;
-  try{
-    while(guard<6){guard++;
-      const q=`query($c:String){collection(handle:${JSON.stringify(handle)}){products(first:100,after:$c){pageInfo{hasNextPage endCursor}edges{node{handle}}}}}`;
-      const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query:q,variables:{c:cursor}})});
-      const j=await r.json();const c=j.data&&j.data.collection;if(!c||!c.products)break;
-      c.products.edges.forEach(e=>{if(e.node.handle)PROMO_SET.add(e.node.handle);});
-      if(c.products.pageInfo.hasNextPage)cursor=c.products.pageInfo.endCursor;else break;
-    }
-  }catch(e){console.warn('promoSet:',e);}
+  try{while(guard<6){guard++;
+    const q=`query($c:String){collection(handle:${JSON.stringify(handle)}){products(first:100,after:$c){pageInfo{hasNextPage endCursor}edges{node{handle}}}}}`;
+    const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query:q,variables:{c:cursor}})});
+    const j=await r.json();const c=j.data&&j.data.collection;if(!c||!c.products)break;
+    c.products.edges.forEach(e=>{if(e.node.handle)set.add(e.node.handle);});
+    if(c.products.pageInfo.hasNextPage)cursor=c.products.pageInfo.endCursor;else break;
+  }}catch(e){console.warn('collectionHandles:',e);}
+  return set;
+}
+async function collectionHandlesByTitle(title){
+  const sh=CONFIG.SHOPIFY;const set=new Set();if(!shopifyReady()||!title)return set;
+  const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
+  const q='{collections(first:5,query:'+JSON.stringify('title:'+title)+'){edges{node{handle products(first:100){edges{node{handle}}}}}}}';
+  try{const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query:q})});const j=await r.json();const edges=j.data&&j.data.collections&&j.data.collections.edges;if(edges){for(const e of edges){const pr=e.node.products&&e.node.products.edges;if(pr&&pr.length){pr.forEach(x=>{if(x.node.handle)set.add(x.node.handle);});break;}}}}catch(e){console.warn('collectionHandlesByTitle:',e);}
+  return set;
+}
+async function loadPromoSets(){
+  if(!shopifyReady()||!CONFIG.PROMOS)return;
+  for(const p of CONFIG.PROMOS){
+    let set=await collectionHandles(p.collection);
+    if(!set.size && p.title) set=await collectionHandlesByTitle(p.title);
+    PROMO_SETS[p.key]=set;
+  }
   renderCart();
 }
 function addToCart(id,btn){const it=cart.find(i=>i.id===id);if(it)it.qty++;else cart.push({id,qty:1});updateBadge();renderCart();
@@ -787,8 +814,8 @@ function loadCart(){try{const s=localStorage.getItem('bukz_cart');if(!s)return;c
 function updateBadge(){const n=cartCount();cartBadge.textContent=n;cartBadge.className='badge'+(n>0?' show':'');}
 function renderCart(){const box=document.getElementById('cartItems');
   if(!cart.length){box.innerHTML='<div class="empty">Tu carrito está vacío.<br>Pídele una recomendación al buscador 📚</div>';}
-  else{box.innerHTML=cart.map(i=>{const b=byId(i.id);return `<div class="ci"><div class="ci-cover" style="${coverStyle(b)}"></div>
-    <div class="ci-info"><div class="ci-title">${esc(b.titulo)}${isPromo(b)?'<span class="ci-promo">3x2</span>':''}</div><div class="ci-author">${esc(b.autor)}</div>
+  else{box.innerHTML=cart.map(i=>{const b=byId(i.id);const pr=promoOf(b);return `<div class="ci"><div class="ci-cover" style="${coverStyle(b)}"></div>
+    <div class="ci-info"><div class="ci-title">${esc(b.titulo)}${pr?`<span class="ci-promo" style="background:${pr.color};color:#fff">${esc(pr.badge||'3x2')}</span>`:''}</div><div class="ci-author">${esc(b.autor)}</div>
     <div class="ci-bottom"><div class="qty"><button data-m="${b.id}">−</button><span>${i.qty}</span><button data-p="${b.id}">+</button></div><span class="ci-price">${fmtCOP(b.precio*i.qty)}</span></div></div></div>`;}).join("");
     box.querySelectorAll('[data-m]').forEach(x=>x.onclick=()=>setQty(x.dataset.m,-1));
     box.querySelectorAll('[data-p]').forEach(x=>x.onclick=()=>setQty(x.dataset.p,1));}
@@ -799,8 +826,9 @@ function renderCart(){const box=document.getElementById('cartItems');
   else pr.style.display='none';
   document.getElementById('totalRow').style.display=cart.length?'':'none';
   document.getElementById('cartTotal').textContent=fmtCOP(sub-pc.discount);
-  const note=document.getElementById('promoNote'),rem=pc.count%3;
-  if(pc.count>0&&rem!==0){const need=3-rem;note.style.display='';note.textContent=`Agrega ${need} libro${need>1?'s':''} de la promo 3x2 y el más barato te sale gratis.`;}else note.style.display='none';
+  const note=document.getElementById('promoNote');
+  const nudges=pc.detail.filter(d=>d.count%3!==0).map(d=>{const need=3-(d.count%3);return `Agrega ${need} libro${need>1?'s':''} de ${d.promo.badge||'la promo'} y el más barato sale gratis.`;});
+  if(nudges.length){note.style.display='';note.innerHTML=nudges.map(t=>esc(t)).join('<br>');}else note.style.display='none';
   document.getElementById('buyNow').disabled=!cart.length;
   saveCart();}
 const backdrop=document.getElementById('backdrop'),drawer=document.getElementById('drawer');
@@ -861,7 +889,7 @@ document.querySelectorAll('#idSeg button').forEach(b=>b.onclick=()=>{
 });
 
 function renderSummary(){
-  document.getElementById('sumItems').innerHTML=cart.map(i=>{const b=byId(i.id);return `<div class="si"><div class="si-cover" style="${coverStyle(b)}"></div><div class="si-info"><div class="si-t">${esc(b.titulo)}${isPromo(b)?' <span class="ci-promo">3x2</span>':''}</div><div class="si-q">Cantidad: ${i.qty}</div></div><div class="si-p">${fmtCOP(b.precio*i.qty)}</div></div>`;}).join("");
+  document.getElementById('sumItems').innerHTML=cart.map(i=>{const b=byId(i.id);const pr=promoOf(b);return `<div class="si"><div class="si-cover" style="${coverStyle(b)}"></div><div class="si-info"><div class="si-t">${esc(b.titulo)}${pr?` <span class="ci-promo" style="background:${pr.color};color:#fff">${esc(pr.badge||'3x2')}</span>`:''}</div><div class="si-q">Cantidad: ${i.qty}</div></div><div class="si-p">${fmtCOP(b.precio*i.qty)}</div></div>`;}).join("");
   const sub=cartSubtotal(),pc=promoCalc();
   document.getElementById('sumSub').textContent=fmtCOP(sub);
   const sd=document.getElementById('sumDiscount');
@@ -940,7 +968,7 @@ document.getElementById('shopStatusX').onclick=()=>document.getElementById('shop
     if(j&&j.data&&j.data.products){
       await loadShopifyCatalog();
       showShopStatus(true,'✔ Conectado a Shopify ('+CATALOG.length+' productos cargados).');
-      loadPromoSet();
+      loadPromoSets();
 
     }else{
       showShopStatus(false,'Shopify respondió <b>HTTP '+r.status+'</b>: '+(j?JSON.stringify(j.errors||j):txt).slice(0,220));
@@ -1015,46 +1043,68 @@ async function sectionBooks(kind){
 async function showSection(kind){
   if(busy)return;busy=true;
   app.classList.add('chat-mode');
-  const labels={mes:'Libros del mes',nuevos:'Novedades',promos:'Promos del mes'};
-  const replies={mes:'Estos son los libros del mes:',nuevos:'Lo más nuevo que acaba de llegar',promos:'Promos del mes'};
+  const labels={mes:'Libros del mes',nuevos:'Novedades'};
+  const replies={mes:'Estos son los libros del mes:',nuevos:'Lo más nuevo que acaba de llegar'};
   const empty='Por ahora no hay nada en esta sección. Prueba con una búsqueda o escríbenos por WhatsApp.';
-  history.push({role:'user',text:labels[kind]});
-  const uEl=addUser(labels[kind]);addLoading();scrollToEl(uEl);
-
-  if(kind==='promos'){
-    const handle=(CONFIG.PANEL&&CONFIG.PANEL.promoCollection)||'editorial-planeta';
-    let page;try{page=await sfCollectionPage(handle,null,24);}catch(e){page={books:[],cursor:null,hasNext:false};}
-    const lm=document.getElementById('loadingMsg');if(lm){lm.classList.add('fade-out');await new Promise(r=>setTimeout(r,200));lm.remove();}
-    const reply=page.books.length?replies.promos:empty;
-    history.push({role:'assistant',text:page.books.length?'Promo del mes: compra 2 libros y lleva el tercero gratis en estos libros seleccionados.':empty});
-    const msgEl=addBot(page.books.length?'':reply,page.books,[]);
-    if(page.books.length){
-      const head=document.createElement('div');head.className='promo-head fade';
-      head.innerHTML='<div class="pt">Esta es la promo del mes</div><div class="ps">Compra 2 libros y lleva el tercero gratis en estos libros seleccionados.</div>';
-      msgEl.insertBefore(head,msgEl.firstChild);
-    }
-    if(page.hasNext){
-      const grid=msgEl.querySelector('.grid');
-      const more=document.createElement('button');more.className='ver-mas';more.textContent='Ver más';
-      let cursor=page.cursor,loading=false;
-      more.addEventListener('click',async()=>{
-        if(loading)return;loading=true;more.textContent='Cargando…';more.classList.add('loading');
-        const np=await sfCollectionPage(handle,cursor,24);
-        appendBooks(grid,np.books);cursor=np.cursor;
-        if(np.hasNext){more.textContent='Ver más';more.classList.remove('loading');loading=false;}else{more.remove();}
-      });
-      msgEl.appendChild(more);
-    }
-    scrollToEl(uEl);busy=false;return;
-  }
-
+  history.push({role:'user',text:labels[kind]||'Sección'});
+  const uEl=addUser(labels[kind]||'Sección');addLoading();scrollToEl(uEl);
   let books=[];try{books=await sectionBooks(kind);}catch(e){}
   const lm=document.getElementById('loadingMsg');if(lm){lm.classList.add('fade-out');await new Promise(r=>setTimeout(r,200));lm.remove();}
-  const reply=books.length?replies[kind]:empty;
+  const reply=books.length?(replies[kind]||''):empty;
   history.push({role:'assistant',text:reply});
   addBot(reply,books,[]);scrollToEl(uEl);busy=false;
 }
-document.querySelectorAll('.qcat').forEach(b=>b.addEventListener('click',()=>showSection(b.dataset.cat)));
+function showPromosMenu(){
+  if(busy)return;busy=true;
+  app.classList.add('chat-mode');
+  history.push({role:'user',text:'Promos'});
+  const uEl=addUser('Promos');
+  const reply='Este mes tenemos dos promociones (no se combinan entre sí). ¿Cuál quieres ver?';
+  history.push({role:'assistant',text:reply});
+  const e=document.createElement('div');e.className='msg-bot';
+  e.innerHTML=`<div class="txt fade">${esc(reply)}</div><div class="promo-menu fade">${(CONFIG.PROMOS||[]).map(p=>`<div class="promo-opt" style="--pc:${p.color}"><div class="promo-opt-h"><span class="promo-dot"></span><span class="po-t">${esc(p.menuLabel||p.badge)}</span></div><div class="po-s">${esc(p.desc||'')}</div><button class="po-btn" data-promo="${p.key}">Ver promo</button></div>`).join('')}</div>`;
+  thread.appendChild(e);
+  e.querySelectorAll('[data-promo]').forEach(b=>b.addEventListener('click',()=>showPromo(b.dataset.promo)));
+  scrollToEl(uEl);busy=false;
+}
+async function loadPromoBooks(promo,cursor){
+  let page=await sfCollectionPage(promo.collection,cursor,24);
+  if(!page.books.length && !cursor && promo.title){
+    const byTitle=await sfCollectionByTitle(promo.title);
+    if(byTitle.length) return {books:byTitle,cursor:null,hasNext:false};
+  }
+  return page;
+}
+async function showPromo(key){
+  if(busy)return;busy=true;
+  const promo=(CONFIG.PROMOS||[]).find(p=>p.key===key);if(!promo){busy=false;return;}
+  app.classList.add('chat-mode');
+  history.push({role:'user',text:promo.menuLabel||promo.badge});
+  const uEl=addUser(promo.menuLabel||promo.badge);addLoading();scrollToEl(uEl);
+  let page;try{page=await loadPromoBooks(promo,null);}catch(e){page={books:[],cursor:null,hasNext:false};}
+  (page.books||[]).forEach(b=>{if(b)b.promo=promo;});
+  const lm=document.getElementById('loadingMsg');if(lm){lm.classList.add('fade-out');await new Promise(r=>setTimeout(r,200));lm.remove();}
+  if(!page.books.length){const reply='Por ahora no hay libros en esta promo. Escríbenos por WhatsApp y te ayudamos.';history.push({role:'assistant',text:reply});addBot(reply,[],[]);scrollToEl(uEl);busy=false;return;}
+  history.push({role:'assistant',text:promo.menuLabel});
+  const msgEl=addBot('',page.books,[]);
+  const head=document.createElement('div');head.className='promo-head fade';head.style.setProperty('--pc',promo.color);
+  head.innerHTML=`<div class="pt">${esc(promo.menuLabel||promo.badge)}</div><div class="ps">${esc(promo.desc||'Compra 2 libros y lleva el tercero gratis.')} Las promos no se combinan entre sí.</div>`;
+  msgEl.insertBefore(head,msgEl.firstChild);
+  if(page.hasNext){
+    const grid=msgEl.querySelector('.grid');
+    const more=document.createElement('button');more.className='ver-mas';more.textContent='Ver más';
+    let cursor=page.cursor,loading=false;
+    more.addEventListener('click',async()=>{
+      if(loading)return;loading=true;more.textContent='Cargando…';more.classList.add('loading');
+      const np=await sfCollectionPage(promo.collection,cursor,24);(np.books||[]).forEach(b=>{if(b)b.promo=promo;});
+      appendBooks(grid,np.books);cursor=np.cursor;
+      if(np.hasNext){more.textContent='Ver más';more.classList.remove('loading');loading=false;}else{more.remove();}
+    });
+    msgEl.appendChild(more);
+  }
+  scrollToEl(uEl);busy=false;
+}
+document.querySelectorAll('.qcat').forEach(b=>b.addEventListener('click',()=>{const c=b.dataset.cat;if(c==='promos')showPromosMenu();else showSection(c);}));
 </script>
 </body>
 </html>
