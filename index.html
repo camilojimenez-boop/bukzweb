@@ -987,11 +987,27 @@ async function sfCollectionPage(handle,cursor,n){
     return {books:c.products.edges.map(e=>mapProduct(e.node)),cursor:c.products.pageInfo.endCursor,hasNext:c.products.pageInfo.hasNextPage};
   }catch(e){console.warn('sfCollectionPage:',e);return {books:[],cursor:null,hasNext:false};}
 }
+async function sfCollectionByTitle(title){
+  const sh=CONFIG.SHOPIFY; if(!shopifyReady())return [];
+  const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
+  const node='id title handle vendor productType tags description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id price{amount} compareAtPrice{amount}}}}';
+  const q='{collections(first:5,query:'+JSON.stringify('title:'+title)+'){edges{node{handle products(first:30){edges{node{'+node+'}}}}}}}';
+  try{
+    const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query:q})});
+    const j=await r.json();const edges=j.data&&j.data.collections&&j.data.collections.edges;
+    if(!edges||!edges.length){console.warn('colección por título:',j.errors||j);return [];}
+    for(const e of edges){const pr=e.node.products&&e.node.products.edges;if(pr&&pr.length)return pr.map(x=>mapProduct(x.node));}
+    return [];
+  }catch(e){console.warn('sfCollectionByTitle:',e);return [];}
+}
 async function sectionBooks(kind){
   if(kind==='mes'){
     const h=CONFIG.MES_COLLECTION||'libros-del-mes';
-    const page=await sfCollectionPage(h,null,30);
-    return page.books;
+    let page=await sfCollectionPage(h,null,30);
+    if(page.books.length) return page.books;
+    const byTitle=await sfCollectionByTitle('Libros del Mes');
+    if(byTitle.length) return byTitle;
+    return await sfProducts({query:"tag:'Libro del mes'",n:30});  // respaldo: el tag que ya funcionaba
   }
   if(kind==='nuevos'){return await sfProducts({sortKey:'CREATED_AT',reverse:true,n:18});}
   return [];
