@@ -326,6 +326,8 @@
   .promo-row .v{color:#2f7a2f;font-weight:700}
   .total-row .t{font-weight:700} .total-row .v{font-weight:800;font-size:16px}
   .promo-note{font-size:12px;line-height:1.4;color:var(--soft);background:rgba(242,232,92,.08);border:1px solid rgba(242,232,92,.25);border-radius:10px;padding:9px 12px;margin:4px 0 12px}
+  .wa-btn{display:inline-flex;align-items:center;gap:9px;margin-top:16px;font-family:inherit;font-size:14px;font-weight:600;color:#fff;background:#25D366;border:none;border-radius:999px;padding:11px 20px;text-decoration:none;cursor:pointer;transition:transform .14s ease,filter .14s ease}
+  .wa-btn:hover{transform:translateY(-1px);filter:brightness(1.05)}
 </style>
 </head>
 <body>
@@ -507,6 +509,7 @@ const CONFIG = {
     productUrlBase: "https://www.bukz.co/products/"
   },
   CHAT_ENDPOINT: "https://bukiaweb.camilo-jimenez.workers.dev",     // backend de IA (Cloudflare Worker)
+  WHATSAPP: "573114332607",   // atención al cliente (formato internacional sin + ni espacios)
   // Producción: Bold necesita tu llave de comercio + firma de integridad (hash)
   // generada en backend. Siigo necesita su API (auth + crear factura) tras el pago.
   BOLD:  { merchantId: "", apiKey: "", currency: "COP" },
@@ -607,9 +610,19 @@ function localSearch(query){
   return {reply:intentReply,books,suggestions};
 }
 async function aiSearch(history){const r=await fetch(CONFIG.CHAT_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:history})});const d=await r.json();return{reply:d.reply,books:(d.bookIds||[]).map(byId).filter(Boolean),suggestions:d.suggestions||[]};}
+async function expandSearch(q){
+  const words=cleanQuery(q).split(/\s+/).filter(w=>w.length>=4);
+  words.sort((a,b)=>b.length-a.length);
+  const top=words.slice(0,3);
+  if(!top.length)return [];
+  const res=await Promise.all(top.map(w=>shopifySearch(w).catch(()=>[])));
+  const seenH=new Set(),out=[];
+  res.flat().forEach(b=>{if(b&&b.id&&!seenH.has(b.id)){seenH.add(b.id);out.push(b);}});
+  return out;
+}
 function cleanQuery(q){
   let s=' '+q.toLowerCase().replace(/[¿?¡!.,;:"'()]/g,' ')+' ';
-  s=s.replace(/\b(hola|holaa|buenas|buenos|d[ií]as|tardes|noches|hey|ola|porfa|por|favor|recomi[eé]ndame|recomi[eé]nda|recomendaciones|recomendaci[oó]n|busco|buscar|quiero|necesito|dame|mu[eé]strame|sugi[eé]reme|sugiere|tienen|tienes|hay|gustar[ií]a|me|algo|libros|libro|de|del|se)\b/gi,' ');
+  s=s.replace(/\b(hola|holaa|buenas|buenos|d[ií]as|tardes|noches|hey|ola|porfa|por|favor|recomi[eé]ndame|recomi[eé]nda|recomi[eé]ndas|recomi[eé]ndan|recomendaciones|recomendaci[oó]n|busco|buscar|quiero|necesito|dame|mu[eé]strame|sugi[eé]reme|sugiere|tienen|tienes|hay|gustar[ií]a|me|mi|algo|alguno|alguna|libros|libro|de|del|se|antes|despu[eé]s|para|sobre|mejor|mejores|leer|comprar|regalar|ir|voy|vamos|que|qu[eé]|cual|cu[aá]l|un|una|unos|unas|el|la|los|las|en|a)\b/gi,' ');
   s=s.replace(/\s+/g,' ').trim();
   return s.length>=3 ? s : q.trim();
 }
@@ -618,7 +631,9 @@ async function runSearch(q){
   if(CONFIG.CHAT_ENDPOINT){
     let candidates=[];
     if(shopifyReady()){ try{ candidates=await shopifySearch(cleanQuery(q)); }catch(e){} }
-    if(!candidates.length){ try{ candidates=(localSearch(q).books)||[]; }catch(e){} }   // respaldo: catálogo ya cargado
+    if(!candidates.length && shopifyReady()){ try{ candidates=await expandSearch(q); }catch(e){} }   // por palabras clave
+    if(!candidates.length){ try{ candidates=(localSearch(q).books)||[]; }catch(e){} }                 // catálogo ya cargado
+    if(!candidates.length && shopifyReady()){ try{ candidates=await sfProducts({sortKey:'BEST_SELLING',n:8}); }catch(e){} } // último recurso: populares (no soltar la venta)
     if(/(barat|econ[oó]mic|precio|menos de)/.test(norm(q))) candidates=candidates.slice().sort((a,b)=>a.precio-b.precio);
     const books=candidates.slice(0,8);   // ← el BUSCADOR NATIVO decide qué se muestra
     try{
@@ -708,6 +723,15 @@ function addBot(reply,books,suggestions){(books||[]).forEach(b=>{if(b&&b.id)seen
   if(books&&books.length)h+=`<div class="grid">${books.map((b,i)=>`<div class="pop" style="animation-delay:${base+i*90}ms">${cardHTML(b)}</div>`).join("")}</div>`;
   if(suggestions&&suggestions.length){const cd=base+(books?books.length:0)*90+140;h+=`<div class="chips fade" style="animation-delay:${cd}ms">${suggestions.map(s=>`<button class="chip" data-q="${esc(s)}">${esc(s)}</button>`).join("")}</div>`;}
   e.innerHTML=h;thread.appendChild(e);
+  if(!books||!books.length){
+    if(CONFIG.WHATSAPP){
+      const wa=document.createElement('a');wa.className='wa-btn fade';
+      wa.href='https://wa.me/'+CONFIG.WHATSAPP+'?text='+encodeURIComponent('Hola, busco un libro y no lo encontré en el buscador de Bukz. ¿Me ayudan?');
+      wa.target='_blank';wa.rel='noopener';
+      wa.innerHTML='<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 1.67c2.2 0 4.27.86 5.82 2.42a8.2 8.2 0 0 1 2.42 5.82c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.18 8.18 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24zm4.52 10.36c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.01-.38.11-.51.11-.11.25-.29.37-.43.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.47-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.14-1.18-.06-.1-.22-.16-.47-.28z"/></svg>Escríbenos por WhatsApp';
+      e.appendChild(wa);
+    }
+  }
   wireCards(e);
   return e;
   }
