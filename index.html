@@ -753,6 +753,8 @@ async function loadPromoSet(){
 function addToCart(id,btn){const it=cart.find(i=>i.id===id);if(it)it.qty++;else cart.push({id,qty:1});updateBadge();renderCart();
   if(btn){btn.classList.add('added');btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span class="add-lbl">Añadido</span>';setTimeout(()=>{btn.classList.remove('added');btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span class="add-lbl">Agregar</span>';},1100);}}
 function setQty(id,d){const it=cart.find(i=>i.id===id);if(!it)return;it.qty+=d;if(it.qty<=0)cart=cart.filter(i=>i.id!==id);updateBadge();renderCart();}
+function saveCart(){try{const data=cart.map(i=>({id:i.id,qty:i.qty,b:byId(i.id)}));localStorage.setItem('bukz_cart',JSON.stringify(data));}catch(e){}}
+function loadCart(){try{const s=localStorage.getItem('bukz_cart');if(!s)return;const data=JSON.parse(s)||[];cart=data.map(d=>{if(d.b&&d.b.id)seen[d.b.id]=d.b;return {id:d.id,qty:d.qty};}).filter(x=>x.id&&x.qty>0);}catch(e){cart=[];}}
 function updateBadge(){const n=cartCount();cartBadge.textContent=n;cartBadge.className='badge'+(n>0?' show':'');}
 function renderCart(){const box=document.getElementById('cartItems');
   if(!cart.length){box.innerHTML='<div class="empty">Tu carrito está vacío.<br>Pídele una recomendación al buscador 📚</div>';}
@@ -770,14 +772,15 @@ function renderCart(){const box=document.getElementById('cartItems');
   document.getElementById('cartTotal').textContent=fmtCOP(sub-pc.discount);
   const note=document.getElementById('promoNote'),rem=pc.count%3;
   if(pc.count>0&&rem!==0){const need=3-rem;note.style.display='';note.textContent=`Agrega ${need} libro${need>1?'s':''} de la promo 3x2 y el más barato te sale gratis.`;}else note.style.display='none';
-  document.getElementById('buyNow').disabled=!cart.length;}
+  document.getElementById('buyNow').disabled=!cart.length;
+  saveCart();}
 const backdrop=document.getElementById('backdrop'),drawer=document.getElementById('drawer');
 function openCart(){renderCart();drawer.classList.add('open');backdrop.classList.add('open');}
 function closeCart(){drawer.classList.remove('open');backdrop.classList.remove('open');}
 document.getElementById('cartBtn').onclick=openCart;
 document.getElementById('closeCart').onclick=closeCart;
 backdrop.onclick=closeCart;
-updateBadge();renderCart();
+loadCart();updateBadge();renderCart();
 
 /* ─────────── CHECKOUT ─────────── */
 const checkout=document.getElementById('checkout');
@@ -795,7 +798,13 @@ async function shopifyCheckout(btn){
     const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query,variables:{lines}})});
     const j=await r.json();
     const url=j.data&&j.data.cartCreate&&j.data.cartCreate.cart&&j.data.cartCreate.cart.checkoutUrl;
-    if(url){ window.location.href=url; return; }
+    if(url){
+      const sep=url.includes('?')?'&':'?';
+      const utm=url+sep+'utm_source=bukz-ia&utm_medium=app&utm_campaign=asistente';
+      window.open(utm,'_blank','noopener');
+      if(btn){btn.disabled=false;btn.textContent='Abriendo checkout…';setTimeout(()=>{btn.textContent=old;},1600);}
+      return;
+    }
     console.warn('cartCreate:',j); alert('No se pudo abrir el checkout de Shopify. Revisa la consola.');
   }catch(e){ console.warn(e); alert('Error al ir al checkout de Shopify.'); }
   if(btn){btn.disabled=false;btn.textContent=old;}
