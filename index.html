@@ -510,6 +510,11 @@ const CONFIG = {
   },
   CHAT_ENDPOINT: "https://bukiaweb.camilo-jimenez.workers.dev",     // backend de IA (Cloudflare Worker)
   WHATSAPP: "https://wa.link/0pqg73",   // enlace de atención al cliente por WhatsApp
+  MES_COLLECTION: "libros-del-mes",     // colección de Shopify para el botón "Libros del mes"
+  PROMOS: [
+    { key:"penguin", label:"Penguin 3x2", collection:"penguin-random-house", color:"#F97316", desc:"Compra 2 libros de Penguin Random House y lleva el tercero gratis." },
+    { key:"planeta", label:"Planeta 3x2", collection:"editorial-planeta",     color:"#2F6FED", desc:"Compra 2 libros de Planeta de Libros y lleva el tercero gratis." }
+  ],
   // Producción: Bold necesita tu llave de comercio + firma de integridad (hash)
   // generada en backend. Siigo necesita su API (auth + crear factura) tras el pago.
   BOLD:  { merchantId: "", apiKey: "", currency: "COP" },
@@ -984,10 +989,9 @@ async function sfCollectionPage(handle,cursor,n){
 }
 async function sectionBooks(kind){
   if(kind==='mes'){
-    const base=await sfProducts({sortKey:'BEST_SELLING',n:100});
-    const sale=base.filter(p=>p.compareAt&&p.compareAt>p.precio);
-    sale.sort((a,b)=>((b.compareAt-b.precio)/b.compareAt)-((a.compareAt-a.precio)/a.compareAt));
-    return sale.length?sale.slice(0,18):base.slice(0,18);
+    const h=CONFIG.MES_COLLECTION||'libros-del-mes';
+    const page=await sfCollectionPage(h,null,30);
+    return page.books;
   }
   if(kind==='nuevos'){return await sfProducts({sortKey:'CREATED_AT',reverse:true,n:18});}
   return [];
@@ -996,7 +1000,7 @@ async function showSection(kind){
   if(busy)return;busy=true;
   app.classList.add('chat-mode');
   const labels={mes:'Libros del mes',nuevos:'Novedades',promos:'Promos del mes'};
-  const replies={mes:'Estas son las promos principales del mes:',nuevos:'Lo más nuevo que acaba de llegar',promos:'Promos del mes'};
+  const replies={mes:'Estos son los libros del mes:',nuevos:'Lo más nuevo que acaba de llegar',promos:'Promos del mes'};
   const empty='Por ahora no hay nada en esta sección. Prueba con una búsqueda o escríbenos por WhatsApp.';
   history.push({role:'user',text:labels[kind]});
   const uEl=addUser(labels[kind]);addLoading();scrollToEl(uEl);
