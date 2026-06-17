@@ -532,15 +532,20 @@ const coverStyle = b => b.image ? `background-image:url('${b.image}');background
 
 /* ─────────── Catálogo real de Shopify (Storefront API) ─────────── */
 function pickColor(s){const pal=["#C24B2B","#7A1F1F","#3B5249","#2E4057","#1F2A44","#4A2C5A","#6B5333","#2B6E5E","#8A5A2B","#3F2A2A","#445A3B","#2E5A7A","#7A4A5A","#8A6A2B","#3A4A4A"];let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return pal[h%pal.length];}
+// Sucursales que hacen despacho online. Si el producto no está en ninguna, va "Agotado".
+const ONLINE_DISPATCH = ['cedi lomas','bukz las lomas','bukz lomas'];
+function dispatchable(tags){const t=(tags||[]).map(x=>String(x).toLowerCase().trim());return t.some(x=>ONLINE_DISPATCH.includes(x));}
 function mapProduct(n){
   const amt=(n.priceRange&&n.priceRange.minVariantPrice)?parseFloat(n.priceRange.minVariantPrice.amount):0;
   const v=(n.variants&&n.variants.edges[0])?n.variants.edges[0].node:null;
   const precio=Math.round(amt);
   const compareAt=(v&&v.compareAtPrice&&v.compareAtPrice.amount)?Math.round(parseFloat(v.compareAtPrice.amount)):0;
+  const tags=(n.tags||[]);
   return { id:n.handle||n.id, titulo:n.title, autor:n.vendor||"", precio,
     cat:n.productType||"Libros", desc:(n.description||"").trim(),
     image:n.featuredImage?n.featuredImage.url:"", url:(CONFIG.SHOPIFY.productUrlBase||"")+(n.handle||""),
-    variantId:v?v.id:"", compareAt:(compareAt>precio?compareAt:0), available:(n.availableForSale!==false), tags:(n.tags||[]), color:pickColor(n.handle||n.title||"x") };
+    variantId:v?v.id:"", compareAt:(compareAt>precio?compareAt:0),
+    available:((n.availableForSale!==false) && dispatchable(tags)), tags, color:pickColor(n.handle||n.title||"x") };
 }
 async function loadShopifyCatalog(){
   const sh=CONFIG.SHOPIFY;
