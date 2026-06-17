@@ -521,8 +521,8 @@ const CONFIG = {
   WHATSAPP: "https://wa.link/0pqg73",   // enlace de atención al cliente por WhatsApp
   MES_COLLECTION: "libros-del-mes",     // colección de Shopify para el botón "Libros del mes"
   PROMOS: [
-    { key:"penguin", menuLabel:"3x2 Penguin Random House", badge:"Penguin 3x2", collection:"penguin-random-house", title:"Penguin Random House", color:"#F97316", desc:"Compra 2 libros de Penguin Random House y lleva el tercero gratis." },
-    { key:"planeta", menuLabel:"3x2 Planeta",               badge:"Planeta 3x2", collection:"editorial-planeta",     title:"Planeta de Libros",     color:"#2F6FED", desc:"Compra 2 libros de Planeta de Libros y lleva el tercero gratis." }
+    { key:"penguin", menuLabel:"3x2 Penguin Random House", badge:"Penguin 3x2", tag:"3X2 PENGUIN",        color:"#F97316", desc:"Compra 2 libros de Penguin Random House y lleva el tercero gratis." },
+    { key:"planeta", menuLabel:"3x2 Planeta",               badge:"Planeta 3x2", tag:"PROMO 3X2 PLANETA", color:"#2F6FED", desc:"Compra 2 libros de Planeta de Libros y lleva el tercero gratis." }
   ],
   // Producción: Bold necesita tu llave de comercio + firma de integridad (hash)
   // generada en backend. Siigo necesita su API (auth + crear factura) tras el pago.
@@ -797,12 +797,35 @@ async function collectionHandlesByTitle(title){
   try{const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query:q})});const j=await r.json();const edges=j.data&&j.data.collections&&j.data.collections.edges;if(edges){for(const e of edges){const pr=e.node.products&&e.node.products.edges;if(pr&&pr.length){pr.forEach(x=>{if(x.node.handle)set.add(x.node.handle);});break;}}}}catch(e){console.warn('collectionHandlesByTitle:',e);}
   return set;
 }
+async function sfQueryPage(queryStr,cursor,n){
+  const sh=CONFIG.SHOPIFY; if(!shopifyReady())return {books:[],cursor:null,hasNext:false};
+  const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
+  const node='id title handle vendor productType tags description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id price{amount} compareAtPrice{amount}}}}';
+  const q=`query($c:String){products(first:${n||24},after:$c,query:${JSON.stringify(queryStr)}){pageInfo{hasNextPage endCursor}edges{node{${node}}}}}`;
+  try{
+    const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query:q,variables:{c:cursor||null}})});
+    const j=await r.json();const p=j.data&&j.data.products;
+    if(!p){console.warn('sfQueryPage:',j.errors||j);return {books:[],cursor:null,hasNext:false};}
+    return {books:p.edges.map(e=>mapProduct(e.node)),cursor:p.pageInfo.endCursor,hasNext:p.pageInfo.hasNextPage};
+  }catch(e){console.warn('sfQueryPage:',e);return {books:[],cursor:null,hasNext:false};}
+}
+async function queryHandles(queryStr){
+  const sh=CONFIG.SHOPIFY;const set=new Set();if(!shopifyReady())return set;
+  const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
+  let cursor=null,guard=0;
+  try{while(guard<6){guard++;
+    const q=`query($c:String){products(first:100,after:$c,query:${JSON.stringify(queryStr)}){pageInfo{hasNextPage endCursor}edges{node{handle}}}}`;
+    const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query:q,variables:{c:cursor}})});
+    const j=await r.json();const p=j.data&&j.data.products;if(!p)break;
+    p.edges.forEach(e=>{if(e.node.handle)set.add(e.node.handle);});
+    if(p.pageInfo.hasNextPage)cursor=p.pageInfo.endCursor;else break;
+  }}catch(e){console.warn('queryHandles:',e);}
+  return set;
+}
 async function loadPromoSets(){
   if(!shopifyReady()||!CONFIG.PROMOS)return;
   for(const p of CONFIG.PROMOS){
-    let set=await collectionHandles(p.collection);
-    if(!set.size && p.title) set=await collectionHandlesByTitle(p.title);
-    PROMO_SETS[p.key]=set;
+    PROMO_SETS[p.key]=await queryHandles("tag:'"+p.tag+"'");
   }
   renderCart();
 }
@@ -1068,12 +1091,7 @@ function showPromosMenu(){
   scrollToEl(uEl);busy=false;
 }
 async function loadPromoBooks(promo,cursor){
-  let page=await sfCollectionPage(promo.collection,cursor,24);
-  if(!page.books.length && !cursor && promo.title){
-    const byTitle=await sfCollectionByTitle(promo.title);
-    if(byTitle.length) return {books:byTitle,cursor:null,hasNext:false};
-  }
-  return page;
+  return await sfQueryPage("tag:'"+promo.tag+"'",cursor,24);
 }
 async function showPromo(key){
   if(busy)return;busy=true;
@@ -1096,7 +1114,7 @@ async function showPromo(key){
     let cursor=page.cursor,loading=false;
     more.addEventListener('click',async()=>{
       if(loading)return;loading=true;more.textContent='Cargando…';more.classList.add('loading');
-      const np=await sfCollectionPage(promo.collection,cursor,24);(np.books||[]).forEach(b=>{if(b)b.promo=promo;});
+      const np=await sfQueryPage("tag:'"+promo.tag+"'",cursor,24);(np.books||[]).forEach(b=>{if(b)b.promo=promo;});
       appendBooks(grid,np.books);cursor=np.cursor;
       if(np.hasNext){more.textContent='Ver más';more.classList.remove('loading');loading=false;}else{more.remove();}
     });
