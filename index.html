@@ -1096,7 +1096,15 @@ function showPromosMenu(){
   scrollToEl(uEl);busy=false;
 }
 async function loadPromoBooks(promo,cursor){
-  return await sfQueryPage("tag:'"+promo.tag+"'",cursor,24);
+  let acc=[],cur=cursor,hasNext=true,guard=0;
+  while(guard<4 && acc.length<6){
+    guard++;
+    const page=await sfQueryPage("tag:'"+promo.tag+"'",cur,24);
+    acc=acc.concat((page.books||[]).filter(b=>b && b.available!==false));   // solo disponibles
+    cur=page.cursor;hasNext=page.hasNext;
+    if(!page.hasNext)break;
+  }
+  return {books:acc,cursor:cur,hasNext};
 }
 async function showPromo(key){
   if(busy)return;busy=true;
@@ -1119,7 +1127,7 @@ async function showPromo(key){
     let cursor=page.cursor,loading=false;
     more.addEventListener('click',async()=>{
       if(loading)return;loading=true;more.textContent='Cargando…';more.classList.add('loading');
-      const np=await sfQueryPage("tag:'"+promo.tag+"'",cursor,24);(np.books||[]).forEach(b=>{if(b)b.promo=promo;});
+      const np=await loadPromoBooks(promo,cursor);(np.books||[]).forEach(b=>{if(b)b.promo=promo;});
       appendBooks(grid,np.books);cursor=np.cursor;
       if(np.hasNext){more.textContent='Ver más';more.classList.remove('loading');loading=false;}else{more.remove();}
     });
