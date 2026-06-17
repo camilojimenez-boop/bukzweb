@@ -526,6 +526,7 @@ const CONFIG = {
   CHAT_ENDPOINT: "https://bukiaweb.camilo-jimenez.workers.dev",     // backend de IA (Cloudflare Worker)
   WHATSAPP: "https://wa.link/0pqg73",   // enlace de atención al cliente por WhatsApp
   MES_COLLECTION: "libros-del-mes",     // colección de Shopify para el botón "Libros del mes"
+  NOVEDADES_COLLECTION: "penguin-novedades",  // colección para el botón "Novedades"
   PROMOS: [
     { key:"penguin", menuLabel:"3x2 Penguin Random House", badge:"Penguin 3x2", tag:"3X2 PENGUIN",        color:"#F97316", desc:"Compra 2 libros de Penguin Random House y lleva el tercero gratis." },
     { key:"planeta", menuLabel:"3x2 Planeta",               badge:"Planeta 3x2", tag:"PROMO 3X2 PLANETA", color:"#2F6FED", desc:"Compra 2 libros de Planeta de Libros y lleva el tercero gratis." }
@@ -1065,7 +1066,14 @@ async function sectionBooks(kind){
     if(byTitle.length) return byTitle;
     return await sfProducts({query:"tag:'Libro del mes'",n:30});  // respaldo: el tag que ya funcionaba
   }
-  if(kind==='nuevos'){return await sfProducts({sortKey:'CREATED_AT',reverse:true,n:18});}
+  if(kind==='nuevos'){
+    const h=CONFIG.NOVEDADES_COLLECTION||'penguin-novedades';
+    let page=await sfCollectionPage(h,null,30);
+    if(page.books.length) return page.books;
+    const byTitle=await sfCollectionByTitle('Penguin Novedades');
+    if(byTitle.length) return byTitle;
+    return await sfProducts({sortKey:'CREATED_AT',reverse:true,n:18});  // respaldo: más recientes
+  }
   return [];
 }
 async function showSection(kind){
