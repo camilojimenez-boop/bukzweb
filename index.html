@@ -385,7 +385,6 @@
     <div class="row total-row" id="totalRow" style="display:none"><span class="t">Total</span><span class="v" id="cartTotal">$0</span></div>
     <div class="promo-note" id="promoNote" style="display:none"></div>
     <button class="btn-primary" id="buyNow" disabled>Comprar ahora</button>
-    <button class="btn-secondary" id="goCheckout" disabled>Checkout de prueba (Bold/Siigo)</button>
   </div>
 </aside>
 
@@ -766,7 +765,6 @@ function renderCart(){const box=document.getElementById('cartItems');
   document.getElementById('cartTotal').textContent=fmtCOP(sub-pc.discount);
   const note=document.getElementById('promoNote'),rem=pc.count%3;
   if(pc.count>0&&rem!==0){const need=3-rem;note.style.display='';note.textContent=`Agrega ${need} libro${need>1?'s':''} de la promo 3x2 y el más barato te sale gratis.`;}else note.style.display='none';
-  document.getElementById('goCheckout').disabled=!cart.length;
   document.getElementById('buyNow').disabled=!cart.length;}
 const backdrop=document.getElementById('backdrop'),drawer=document.getElementById('drawer');
 function openCart(){renderCart();drawer.classList.add('open');backdrop.classList.add('open');}
@@ -779,7 +777,6 @@ updateBadge();renderCart();
 /* ─────────── CHECKOUT ─────────── */
 const checkout=document.getElementById('checkout');
 function openCustomCheckout(){if(!cart.length)return;closeCart();renderSummary();checkout.classList.add('open');checkout.scrollTop=0;}
-document.getElementById('goCheckout').onclick=openCustomCheckout;
 
 // Comprar ahora → crea el carrito en Shopify y va a su checkout nativo
 async function shopifyCheckout(btn){
@@ -885,7 +882,7 @@ document.getElementById('doneBtn').onclick=()=>{
   requestAnimationFrame(tick);
 })();
 /* ─────────── Diagnóstico + carga de Shopify al iniciar ─────────── */
-function showShopStatus(ok,msg){const el=document.getElementById('shopStatus');el.className=ok?'ok':'err';el.style.display='flex';document.getElementById('shopStatusMsg').innerHTML=msg;if(ok)setTimeout(()=>{el.style.display='none';},5000);}
+function showShopStatus(ok,msg){/* aviso oculto en producción */}
 document.getElementById('shopStatusX').onclick=()=>document.getElementById('shopStatus').style.display='none';
 (async function bootShopify(){
   if(!shopifyReady()){console.log('Catálogo de muestra (Shopify sin configurar).');return;}
@@ -948,7 +945,12 @@ async function sfCollectionPage(handle,cursor,n){
   }catch(e){console.warn('sfCollectionPage:',e);return {books:[],cursor:null,hasNext:false};}
 }
 async function sectionBooks(kind){
-  if(kind==='mes'){const tag=(CONFIG.PANEL&&CONFIG.PANEL.libroDelMesTag)||'Libro del mes';return await sfProducts({query:"tag:'"+tag+"'",n:18});}
+  if(kind==='mes'){
+    const base=await sfProducts({sortKey:'BEST_SELLING',n:100});
+    const sale=base.filter(p=>p.compareAt&&p.compareAt>p.precio);
+    sale.sort((a,b)=>((b.compareAt-b.precio)/b.compareAt)-((a.compareAt-a.precio)/a.compareAt));
+    return sale.length?sale.slice(0,18):base.slice(0,18);
+  }
   if(kind==='nuevos'){return await sfProducts({sortKey:'CREATED_AT',reverse:true,n:18});}
   return [];
 }
@@ -956,7 +958,7 @@ async function showSection(kind){
   if(busy)return;busy=true;
   app.classList.add('chat-mode');
   const labels={mes:'Libros del mes',nuevos:'Novedades',promos:'Promos del mes'};
-  const replies={mes:'Estos son los libros del mes',nuevos:'Lo más nuevo que acaba de llegar',promos:'Promos del mes'};
+  const replies={mes:'Estas son las promos principales del mes:',nuevos:'Lo más nuevo que acaba de llegar',promos:'Promos del mes'};
   const empty='Por ahora no hay nada en esta sección. Prueba con una búsqueda o escríbenos por WhatsApp.';
   history.push({role:'user',text:labels[kind]});
   const uEl=addUser(labels[kind]);addLoading();scrollToEl(uEl);
