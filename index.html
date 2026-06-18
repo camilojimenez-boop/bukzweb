@@ -841,11 +841,19 @@ function wireCards(scope){
   scope.querySelectorAll('[data-modal]').forEach(btn=>btn.addEventListener('click',()=>openModal(byId(btn.dataset.modal))));
 }
 function appendBooks(grid,books){if(!grid)return;books.forEach(b=>{if(b&&b.id)seen[b.id]=b;});books.forEach((b,i)=>{const wrap=document.createElement('div');wrap.className='pop';wrap.style.animationDelay=(i*60)+'ms';wrap.innerHTML=cardHTML(b);grid.appendChild(wrap);wireCards(wrap);});}
-function addBot(reply,books,suggestions){(books||[]).forEach(b=>{if(b&&b.id)seen[b.id]=b;});const e=document.createElement('div');e.className='msg-bot';const base=150;let h=reply?`<div class="txt fade">${esc(reply)}</div>`:'';
+function mdReply(s){
+  let t=esc(s||'');
+  t=t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');        // **negritas**
+  t=t.replace(/\(?\s*https?:\/\/wa\.link\/\S+\s*\)?/gi,'');    // quitar URL de WhatsApp (la reemplaza el botón)
+  t=t.replace(/\(\s*\)/g,'').replace(/\s{2,}/g,' ').replace(/\s+([.,;:!?])/g,'$1').trim();
+  return t;
+}
+function addBot(reply,books,suggestions){(books||[]).forEach(b=>{if(b&&b.id)seen[b.id]=b;});const e=document.createElement('div');e.className='msg-bot';const base=150;let h=reply?`<div class="txt fade">${mdReply(reply)}</div>`:'';
   if(books&&books.length)h+=`<div class="grid">${books.map((b,i)=>`<div class="pop" style="animation-delay:${base+i*90}ms">${cardHTML(b)}</div>`).join("")}</div>`;
   if(suggestions&&suggestions.length){const cd=base+(books?books.length:0)*90+140;h+=`<div class="chips fade" style="animation-delay:${cd}ms">${suggestions.map(s=>`<button class="chip" data-q="${esc(s)}">${esc(s)}</button>`).join("")}</div>`;}
   e.innerHTML=h;thread.appendChild(e);
-  if(!books||!books.length){
+  const mentionsWA=/whatsapp|wa\.link/i.test(reply||'');
+  if(!books||!books.length||mentionsWA){
     if(CONFIG.WHATSAPP){
       const wa=document.createElement('a');wa.className='wa-btn fade';
       wa.href=CONFIG.WHATSAPP;
