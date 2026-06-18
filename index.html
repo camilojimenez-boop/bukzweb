@@ -68,9 +68,12 @@
   .qcat{font-family:inherit;font-size:13px;font-weight:600;color:rgba(255,255,255,.85);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:9px 16px;cursor:pointer;transition:all .16s ease}
   .qcat:hover{background:rgba(242,232,92,.14);border-color:rgba(242,232,92,.5);color:#fff;transform:translateY(-1px)}
   .greeting{color:rgba(140,137,128,1);font-size:17px;font-weight:400;letter-spacing:.2px;margin:0 0 14px 4px}
-  .hero-bar{display:flex;align-items:center;height:52px;padding:0 24px;border-radius:999px;background:linear-gradient(180deg,#F6EA60 0%,#EEE157 100%);box-shadow:0 0 80px 8px rgba(240,225,90,.22),0 10px 34px rgba(0,0,0,.30)}
+  .hero-bar{display:flex;align-items:center;height:52px;padding:0 6px 0 24px;border-radius:999px;background:linear-gradient(180deg,#F6EA60 0%,#EEE157 100%);box-shadow:0 0 80px 8px rgba(240,225,90,.22),0 10px 34px rgba(0,0,0,.30)}
   .hero-bar input{flex:1;min-width:0;background:transparent;border:none;outline:none;font-family:inherit;font-size:15.5px;color:#3a382f}
   .hero-bar input::placeholder{color:rgba(58,56,47,.5)}
+  .hero-send{background:var(--black);color:var(--soft);border:none;border-radius:50%;width:40px;height:40px;cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;flex:none;transition:transform .14s ease}
+  .hero-send:hover{transform:scale(1.07)}
+  .hero-send:active{transform:scale(.94)}
   .hero-logo{display:flex;justify-content:flex-end;margin-top:14px}
   .logo{height:26px;width:auto;display:block;user-select:none}
 
@@ -108,6 +111,7 @@
   .stock.out{background:rgba(60,38,34,.7);color:#ffb3a0}
   .stock.store{background:rgba(70,55,20,.74);color:#ffd98a}
   .store-note{font-size:11px;color:#9a7b2e;margin-top:7px;display:flex;align-items:flex-start;gap:4px;line-height:1.35}
+  .import-note{font-size:11px;color:#2e5a7a;margin-top:7px;display:flex;align-items:flex-start;gap:4px;line-height:1.35}
   .add-btn.out{background:#efefe9;color:#a3a299;border-color:#e6e5df;cursor:default}
   .add-btn.store{background:#fff7e6;color:#9a6a00;border-color:#f0e2bf;cursor:pointer}
   .more{margin-top:2px;background:none;border:none;color:#86857c;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;padding:4px 0}
@@ -310,6 +314,7 @@
   .pm-stock.in{background:#e3f3e3;color:#2f7a2f} .pm-stock.out{background:#f3e3e0;color:#a8503c}
   .pm-stock.store{background:#fbf0d8;color:#9a6a00}
   .pm-aviso{font-size:12.5px;color:#8a6310;background:#fbf6e9;border:1px solid #f0e6cb;border-radius:10px;padding:9px 11px;margin-bottom:12px;line-height:1.4}
+  .pm-aviso.import{color:#1f4a6b;background:#eaf3fa;border-color:#cfe3f0}
   .pm-desc{font-size:13.5px;line-height:1.6;color:#4a4a44;margin-bottom:18px;max-height:170px;overflow-y:auto}
   .pm-stores{border-top:1px solid #ececea;padding-top:14px;margin-bottom:18px}
   .pm-sh{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#a3a299;margin-bottom:10px}
@@ -387,7 +392,7 @@
   <section id="hero">
     <div class="hero-wrap">
       <p class="greeting rise" style="animation-delay:1650ms">Bienvenido a tu librería favorita</p>
-      <div class="rise" style="animation-delay:2000ms"><div class="hero-bar"><input id="heroInput" type="text" autocomplete="off" placeholder="¿Qué libro se te antoja hoy?" /></div></div>
+      <div class="rise" style="animation-delay:2000ms"><div class="hero-bar"><input id="heroInput" type="text" autocomplete="off" placeholder="¿Qué libro se te antoja hoy?" /><button class="hero-send" id="heroSendBtn" aria-label="Buscar">&rarr;</button></div></div>
       <div class="hero-foot rise" style="animation-delay:2200ms">
         <div class="quick-cats">
           <button class="qcat" data-cat="mes">Libros del mes</button>
@@ -586,11 +591,13 @@ function mapProduct(n){
   const precio=Math.round(amt);
   const compareAt=(v&&v.compareAtPrice&&v.compareAtPrice.amount)?Math.round(parseFloat(v.compareAtPrice.amount)):0;
   const tags=(n.tags||[]);
-  return { id:n.handle||n.id, titulo:n.title, autor:n.vendor||"", precio,
+  const vendor=n.vendor||"";
+  const imported=/bukz\s*espa/i.test(vendor) || tags.map(t=>String(t).toLowerCase().trim()).includes('bukz españa');
+  return { id:n.handle||n.id, titulo:n.title, autor:vendor, vendor, imported, precio,
     cat:n.productType||"Libros", desc:(n.description||"").trim(),
     image:n.featuredImage?n.featuredImage.url:"", url:(CONFIG.SHOPIFY.productUrlBase||"")+(n.handle||""),
     variantId:v?v.id:"", compareAt:(compareAt>precio?compareAt:0),
-    available:((n.availableForSale!==false) && dispatchable(tags)), tags, color:pickColor(n.handle||n.title||"x") };
+    available:((n.availableForSale!==false) && (dispatchable(tags) || imported)), tags, color:pickColor(n.handle||n.title||"x") };
 }
 async function loadShopifyCatalog(){
   const sh=CONFIG.SHOPIFY;
@@ -735,6 +742,7 @@ let history=[],busy=false;
 document.getElementById('siteSwitch').addEventListener('click',e=>{e.preventDefault();window.location.href=CONFIG.SITE_URL;});
 document.getElementById('sendBtn').addEventListener('click',()=>ask(chatInput.value));
 heroInput.addEventListener('keydown',e=>{if(e.key==='Enter')ask(heroInput.value);});
+document.getElementById('heroSendBtn').addEventListener('click',()=>ask(heroInput.value));
 chatInput.addEventListener('keydown',e=>{if(e.key==='Enter')ask(chatInput.value);});
 document.getElementById('resetBtn').addEventListener('click',()=>{history=[];thread.innerHTML="";app.classList.remove('chat-mode');heroInput.value="";heroInput.focus();});
 
@@ -751,9 +759,10 @@ function cardHTML(b){
               : onlyStore?`<button class="add-btn store" data-modal="${b.id}">${PIN}<span class="add-lbl">En tienda</span></button>`
               : `<button class="add-btn out" disabled>Agotado</button>`;
   const note = onlyStore?`<div class="store-note">${PIN}<span>No disponible online, pero sí en: ${esc(stores.map(s=>s.name.replace(/^Bukz\s+/,'')).join(' · '))}</span></div>`:'';
+  const importNote = b.imported?`<div class="import-note">✈️ <span>Importado · te llega en 20 a 30 días</span></div>`:'';
   return `<div class="card" data-id="${b.id}">
   <div class="cover" style="${coverStyle(b)}">${b.image?'':'<span class="mark">BUKZ</span>'}${pr?`<span class="card-promo" style="background:${pr.color}">${esc(pr.badge||'3x2')}</span>`:''}${badge}</div>
-  <div class="meta"><span class="cat">${esc(b.cat)}</span><div class="title">${esc(b.titulo)}</div>${b.autor?`<div class="author">${esc(b.autor)}</div>`:''}<div class="foot"><span class="price">${fmtCOP(b.precio)}</span>${footBtn}</div>${note}
+  <div class="meta"><span class="cat">${esc(b.cat)}</span><div class="title">${esc(b.titulo)}</div>${b.autor?`<div class="author">${esc(b.autor)}</div>`:''}<div class="foot"><span class="price">${fmtCOP(b.precio)}</span>${footBtn}</div>${note}${importNote}
   <button class="more" data-modal="${b.id}">Ver detalles</button>
   </div></div>`;}
 
@@ -777,7 +786,8 @@ function storesHTML(b){
   const online=b.available!==false;
   const inAny=STORES_DEF.some(s=>!s.intl && has(s.tags));
   const aviso=(!online && inAny)?'<div class="pm-aviso">Este libro no está disponible para compra online por ahora, pero puedes encontrarlo en las tiendas marcadas abajo. Si quieres, escríbenos por WhatsApp y te ayudamos a reservarlo.</div>':'';
-  return '<div class="pm-sh">🏪 Disponibilidad en tiendas</div>'+aviso+STORES_DEF.map(s=>{
+  const importAviso=b.imported?'<div class="pm-aviso import">✈️ Este libro es importado: te llegaría entre 20 y 30 días.</div>':'';
+  return importAviso+'<div class="pm-sh">🏪 Disponibilidad en tiendas</div>'+aviso+STORES_DEF.map(s=>{
     const ok=has(s.tags);
     const addr=s.intl?'<span class="pm-ad">📦 Envío internacional</span>':`<a class="pm-ad" href="${s.map}" target="_blank" rel="noopener">${PIN}${esc(s.addr)}</a>`;
     return `<div class="pm-store"><div><div class="nm">${esc(s.name)}</div>${addr}</div><span class="av ${ok?'ok':'no'}">${ok?'✓ Disponible':'✕ No disp.'}</span></div>`;
