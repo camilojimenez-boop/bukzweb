@@ -609,11 +609,25 @@ function shopifyReady(){const sh=CONFIG.SHOPIFY;return !!(sh&&sh.domain&&!sh.dom
 async function shopifySearch(text){
   const sh=CONFIG.SHOPIFY;
   const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
-  const query=`query($q:String!){products(first:30,query:$q){edges{node{id title handle vendor productType tags description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id}}}}}}}`;
-  const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query,variables:{q:text}})});
-  const j=await r.json();
-  if(!j.data||!j.data.products){console.warn('Shopify:',j.errors||j);return [];}
-  return j.data.products.edges.map(e=>mapProduct(e.node));
+  const fields='id title handle vendor productType tags description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id}}}';
+  // 1) Motor nativo "search" (Search & Discovery): mejor relevancia y tolerancia a errores
+  try{
+    const q1=`query($q:String!){search(query:$q,first:30,types:[PRODUCT]){edges{node{... on Product{${fields}}}}}}`;
+    const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query:q1,variables:{q:text}})});
+    const j=await r.json();
+    const s=j.data&&j.data.search;
+    if(s&&s.edges&&s.edges.length) return s.edges.map(e=>mapProduct(e.node)).filter(Boolean);
+    if(j.errors) console.warn('Shopify search:',j.errors);
+  }catch(e){ console.warn('Shopify search:',e); }
+  // 2) Respaldo: búsqueda básica products(query:)
+  try{
+    const q2=`query($q:String!){products(first:30,query:$q){edges{node{${fields}}}}}`;
+    const r2=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query:q2,variables:{q:text}})});
+    const j2=await r2.json();
+    if(j2.data&&j2.data.products) return j2.data.products.edges.map(e=>mapProduct(e.node)).filter(Boolean);
+    console.warn('Shopify products:',j2.errors||j2);
+  }catch(e){ console.warn('Shopify products:',e); }
+  return [];
 }
 function friendlyReply(q){const s=norm(q);
   if(/(terror|miedo|horror)/.test(s))return"Si te late el terror, mira esto:";
