@@ -68,6 +68,8 @@
   .qcat{font-family:inherit;font-size:13px;font-weight:600;color:rgba(255,255,255,.85);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:9px 16px;cursor:pointer;transition:all .16s ease}
   .qcat:hover{background:rgba(242,232,92,.14);border-color:rgba(242,232,92,.5);color:#fff;transform:translateY(-1px)}
   .greeting{color:rgba(140,137,128,1);font-size:17px;font-weight:400;letter-spacing:.2px;margin:0 0 14px 4px}
+  .greet-title{color:#ECEAE2;font-size:22px;font-weight:600;letter-spacing:.2px;margin:0 0 5px 4px;line-height:1.22}
+  .greet-sub{color:rgba(140,137,128,1);font-size:15px;font-weight:400;letter-spacing:.1px;margin:0 0 16px 4px;line-height:1.35;min-height:20px}
   .hero-bar{display:flex;align-items:center;height:52px;padding:0 6px 0 24px;border-radius:999px;background:linear-gradient(180deg,#F6EA60 0%,#EEE157 100%);box-shadow:0 0 80px 8px rgba(240,225,90,.22),0 10px 34px rgba(0,0,0,.30)}
   .hero-bar input{flex:1;min-width:0;background:transparent;border:none;outline:none;font-family:inherit;font-size:15.5px;color:#3a382f}
   .hero-bar input::placeholder{color:rgba(58,56,47,.5)}
@@ -391,7 +393,8 @@
 
   <section id="hero">
     <div class="hero-wrap">
-      <p class="greeting rise" style="animation-delay:1650ms">Bienvenido a tu librería favorita</p>
+      <p class="greet-title rise" id="greetTitle" style="animation-delay:1650ms">Hola, lector</p>
+      <p class="greet-sub rise" id="greetSub" style="animation-delay:1820ms">Cuéntame qué historia estás buscando.</p>
       <div class="rise" style="animation-delay:2000ms"><div class="hero-bar"><input id="heroInput" type="text" autocomplete="off" placeholder="¿Qué libro se te antoja hoy?" /><button class="hero-send" id="heroSendBtn" aria-label="Buscar">&rarr;</button></div></div>
       <div class="hero-foot rise" style="animation-delay:2200ms">
         <div class="quick-cats">
@@ -707,12 +710,21 @@ async function runSearch(q){
       const queries=[...new Set([q.trim(),cleanQuery(q),...terms].map(s=>String(s||'').trim()).filter(Boolean))];
       const seen=new Set();
       for(const term of queries){
-        if(candidates.length>=16) break;
+        if(candidates.length>=18) break;
         let res=[]; try{ res=await shopifySearch(term); }catch(e){}
-        for(const b of res){ if(b&&!seen.has(b.id)){ seen.add(b.id); candidates.push(b); } }
+        let added=0;
+        for(const b of res){ if(b&&!seen.has(b.id)){ seen.add(b.id); candidates.push(b); if(++added>=8) break; } }  // máx 8 por término: así varios términos (clásicos del género) aportan
       }
     }
-    if(/(barat|econ[oó]mic|precio|menos de)/.test(norm(q))) candidates=candidates.slice().sort((a,b)=>a.precio-b.precio);
+    if(/(barat|econ[oó]mic|precio|menos de)/.test(norm(q))){
+      candidates=candidates.slice().sort((a,b)=>a.precio-b.precio);
+    }else{
+      // Disponibles primero (manteniendo el orden de relevancia dentro de cada grupo)
+      candidates=candidates.map((b,i)=>[b,i]).sort((a,b)=>{
+        const av=x=>(x[0].available!==false)?0:1;
+        return av(a)-av(b) || a[1]-b[1];
+      }).map(x=>x[0]);
+    }
     const books=candidates.slice(0,12);
     try{
       const r=await fetch(CONFIG.CHAT_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
@@ -847,6 +859,27 @@ async function ask(raw){const q=(raw||"").trim();if(!q||busy)return;busy=true;ap
   const lm=document.getElementById('loadingMsg');if(lm){lm.classList.add('fade-out');await new Promise(r=>setTimeout(r,200));lm.remove();}
   history.push({role:"assistant",text:res.reply});addBot(res.reply,res.books,res.suggestions);scrollToEl(uEl);busy=false;chatInput.focus();}
 heroInput.focus();
+// Saludo según la hora + frase aleatoria para un lector
+(function setGreeting(){
+  const h=new Date().getHours();
+  const salute = h<12 ? 'Buenos días, lector' : (h<19 ? 'Buenas tardes, lector' : 'Buenas noches, lector');
+  const subs=[
+    'Cuéntame qué historia estás buscando.',
+    '¿Listo para descubrir tu próxima lectura?',
+    'Dime un tema, un autor o un antojo… y lo exploramos.',
+    'Todo gran lector empieza con una pregunta.',
+    '¿Qué mundo te gustaría habitar hoy?',
+    'Pídeme una recomendación y te sorprendo.',
+    'Hay un libro perfecto esperándote. Busquémoslo.',
+    '¿Buscas algo puntual o prefieres descubrir?',
+    'Una buena historia puede cambiarte el día.',
+    'Escribe lo que se te antoje leer.',
+    'Del clásico al best-seller: dime por dónde empezamos.',
+    '¿Te leo la mente o me das una pista?'
+  ];
+  const t=document.getElementById('greetTitle'); if(t) t.textContent=salute;
+  const s=document.getElementById('greetSub'); if(s) s.textContent=subs[Math.floor(Math.random()*subs.length)];
+})();
 
 /* ─────────── CARRITO ─────────── */
 let cart=[]; // {id, qty}
