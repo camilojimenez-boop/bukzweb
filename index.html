@@ -666,11 +666,22 @@ function cleanQuery(q){
 async function runSearch(q){
   // ── Modo IA: Claude Sonnet vía tu backend (CONFIG.CHAT_ENDPOINT) ──
   if(CONFIG.CHAT_ENDPOINT){
-    // Resultados = exclusivamente el motor de búsqueda de Shopify (sin rellenos)
+    // Resultados = exclusivamente el motor de búsqueda de Shopify.
+    // Sonnet entiende la consulta y la traduce a términos del catálogo; Shopify trae los libros.
     let candidates=[];
     if(shopifyReady()){
-      try{ candidates=await shopifySearch(cleanQuery(q)); }catch(e){}
-      if(!candidates.length){ try{ candidates=await shopifySearch(q.trim()); }catch(e){} }   // reintento con la consulta tal cual (mismo motor de Shopify)
+      let terms=[];
+      try{
+        const tr=await fetch(CONFIG.CHAT_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:"terms",messages:[{role:"user",content:q}]})});
+        const td=await tr.json(); if(td&&Array.isArray(td.terms)) terms=td.terms.filter(Boolean);
+      }catch(e){ console.warn('terms:',e); }
+      const queries=[...new Set([...terms,cleanQuery(q),q.trim()].map(s=>String(s||'').trim()).filter(Boolean))];
+      const seen=new Set();
+      for(const term of queries){
+        if(candidates.length>=16) break;
+        let res=[]; try{ res=await shopifySearch(term); }catch(e){}
+        for(const b of res){ if(b&&!seen.has(b.id)){ seen.add(b.id); candidates.push(b); } }
+      }
     }
     if(/(barat|econ[oó]mic|precio|menos de)/.test(norm(q))) candidates=candidates.slice().sort((a,b)=>a.precio-b.precio);
     const books=candidates.slice(0,12);
