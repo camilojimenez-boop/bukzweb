@@ -106,7 +106,10 @@
   .stock{position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;letter-spacing:.3px;padding:4px 9px;border-radius:999px;backdrop-filter:blur(4px)}
   .stock.in{background:rgba(34,55,34,.62);color:#9be29b}
   .stock.out{background:rgba(60,38,34,.7);color:#ffb3a0}
+  .stock.store{background:rgba(70,55,20,.74);color:#ffd98a}
+  .store-note{font-size:11px;color:#9a7b2e;margin-top:7px;display:flex;align-items:flex-start;gap:4px;line-height:1.35}
   .add-btn.out{background:#efefe9;color:#a3a299;border-color:#e6e5df;cursor:default}
+  .add-btn.store{background:#fff7e6;color:#9a6a00;border-color:#f0e2bf;cursor:pointer}
   .more{margin-top:2px;background:none;border:none;color:#86857c;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;padding:4px 0}
   .more:hover{color:var(--ink)}
   .more .arr{transition:transform .25s ease}
@@ -305,6 +308,8 @@
   .pm-price{font-size:22px;font-weight:700}
   .pm-stock{font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px}
   .pm-stock.in{background:#e3f3e3;color:#2f7a2f} .pm-stock.out{background:#f3e3e0;color:#a8503c}
+  .pm-stock.store{background:#fbf0d8;color:#9a6a00}
+  .pm-aviso{font-size:12.5px;color:#8a6310;background:#fbf6e9;border:1px solid #f0e6cb;border-radius:10px;padding:9px 11px;margin-bottom:12px;line-height:1.4}
   .pm-desc{font-size:13.5px;line-height:1.6;color:#4a4a44;margin-bottom:18px;max-height:170px;overflow-y:auto}
   .pm-stores{border-top:1px solid #ececea;padding-top:14px;margin-bottom:18px}
   .pm-sh{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#a3a299;margin-bottom:10px}
@@ -733,9 +738,22 @@ heroInput.addEventListener('keydown',e=>{if(e.key==='Enter')ask(heroInput.value)
 chatInput.addEventListener('keydown',e=>{if(e.key==='Enter')ask(chatInput.value);});
 document.getElementById('resetBtn').addEventListener('click',()=>{history=[];thread.innerHTML="";app.classList.remove('chat-mode');heroInput.value="";heroInput.focus();});
 
-function cardHTML(b){const av=b.available!==false;const pr=b.promo||(typeof promoOf==='function'?promoOf(b):null);return `<div class="card" data-id="${b.id}">
-  <div class="cover" style="${coverStyle(b)}">${b.image?'':'<span class="mark">BUKZ</span>'}${pr?`<span class="card-promo" style="background:${pr.color}">${esc(pr.badge||'3x2')}</span>`:''}<span class="stock ${av?'in':'out'}">${av?'Disponible':'Agotado'}</span></div>
-  <div class="meta"><span class="cat">${esc(b.cat)}</span><div class="title">${esc(b.titulo)}</div>${b.autor?`<div class="author">${esc(b.autor)}</div>`:''}<div class="foot"><span class="price">${fmtCOP(b.precio)}</span>${av?`<button class="add-btn" data-add="${b.id}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span class="add-lbl">Agregar</span></button>`:`<button class="add-btn out" disabled>Agotado</button>`}</div>
+function cardHTML(b){
+  const online=b.available!==false;
+  const stores=(typeof storesOf==='function')?storesOf(b):[];
+  const onlyStore=!online && stores.length>0;
+  const pr=b.promo||(typeof promoOf==='function'?promoOf(b):null);
+  const badge = online?'<span class="stock in">Disponible</span>'
+              : onlyStore?'<span class="stock store">Solo en tienda</span>'
+              : '<span class="stock out">Agotado</span>';
+  const addSvg='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+  const footBtn = online?`<button class="add-btn" data-add="${b.id}">${addSvg}<span class="add-lbl">Agregar</span></button>`
+              : onlyStore?`<button class="add-btn store" data-modal="${b.id}">${PIN}<span class="add-lbl">En tienda</span></button>`
+              : `<button class="add-btn out" disabled>Agotado</button>`;
+  const note = onlyStore?`<div class="store-note">${PIN}<span>No disponible online, pero sí en: ${esc(stores.map(s=>s.name.replace(/^Bukz\s+/,'')).join(' · '))}</span></div>`:'';
+  return `<div class="card" data-id="${b.id}">
+  <div class="cover" style="${coverStyle(b)}">${b.image?'':'<span class="mark">BUKZ</span>'}${pr?`<span class="card-promo" style="background:${pr.color}">${esc(pr.badge||'3x2')}</span>`:''}${badge}</div>
+  <div class="meta"><span class="cat">${esc(b.cat)}</span><div class="title">${esc(b.titulo)}</div>${b.autor?`<div class="author">${esc(b.autor)}</div>`:''}<div class="foot"><span class="price">${fmtCOP(b.precio)}</span>${footBtn}</div>${note}
   <button class="more" data-modal="${b.id}">Ver detalles</button>
   </div></div>`;}
 
@@ -748,10 +766,18 @@ const STORES_DEF = [
   {name:"Bukz Dropshipping", tags:["Dropshipping","Bukz España"], intl:true},
 ];
 const PIN='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+// Tiendas físicas (no internacional) donde el libro está según sus tags
+function storesOf(b){
+  const t=(b.tags||[]).map(x=>String(x).toLowerCase().trim());
+  return STORES_DEF.filter(s=>!s.intl && (s.tags||[]).some(tag=>t.includes(String(tag).toLowerCase().trim())));
+}
 function storesHTML(b){
   const tags=(b.tags||[]).map(t=>String(t).toLowerCase());
   const has=arr=>arr.some(t=>tags.includes(t.toLowerCase()));
-  return '<div class="pm-sh">🏪 Disponibilidad en tiendas</div>'+STORES_DEF.map(s=>{
+  const online=b.available!==false;
+  const inAny=STORES_DEF.some(s=>!s.intl && has(s.tags));
+  const aviso=(!online && inAny)?'<div class="pm-aviso">Este libro no está disponible para compra online por ahora, pero puedes encontrarlo en las tiendas marcadas abajo. Si quieres, escríbenos por WhatsApp y te ayudamos a reservarlo.</div>':'';
+  return '<div class="pm-sh">🏪 Disponibilidad en tiendas</div>'+aviso+STORES_DEF.map(s=>{
     const ok=has(s.tags);
     const addr=s.intl?'<span class="pm-ad">📦 Envío internacional</span>':`<a class="pm-ad" href="${s.map}" target="_blank" rel="noopener">${PIN}${esc(s.addr)}</a>`;
     return `<div class="pm-store"><div><div class="nm">${esc(s.name)}</div>${addr}</div><span class="av ${ok?'ok':'no'}">${ok?'✓ Disponible':'✕ No disp.'}</span></div>`;
@@ -765,13 +791,17 @@ function openModal(b){
   document.getElementById('pmTitle').textContent=b.titulo||'';
   document.getElementById('pmAuthor').textContent=b.autor||'';
   document.getElementById('pmPrice').textContent=fmtCOP(b.precio);
-  const av=b.available!==false;
-  const st=document.getElementById('pmStock');st.textContent=av?'Disponible':'Agotado';st.className='pm-stock '+(av?'in':'out');
+  const online=b.available!==false;
+  const stores=(typeof storesOf==='function')?storesOf(b):[];
+  const onlyStore=!online && stores.length>0;
+  const st=document.getElementById('pmStock');
+  st.textContent=online?'Disponible':onlyStore?'Solo en tienda':'Agotado';
+  st.className='pm-stock '+(online?'in':onlyStore?'store':'out');
   document.getElementById('pmDesc').textContent=b.desc||'Sin descripción disponible.';
   document.getElementById('pmStores').innerHTML=storesHTML(b);
   const addBtn=document.getElementById('pmAdd');
-  addBtn.disabled=!av;addBtn.textContent=av?'Agregar al carrito':'Agotado';
-  addBtn.onclick=av?function(){addToCart(b.id);addBtn.textContent='✓ Añadido';setTimeout(()=>{addBtn.textContent='Agregar al carrito';},1200);}:null;
+  addBtn.disabled=!online;addBtn.textContent=online?'Agregar al carrito':onlyStore?'Disponible solo en tienda':'Agotado';
+  addBtn.onclick=online?function(){addToCart(b.id);addBtn.textContent='✓ Añadido';setTimeout(()=>{addBtn.textContent='Agregar al carrito';},1200);}:null;
   pmShow(true);
 }
 document.getElementById('pmClose').onclick=()=>pmShow(false);
