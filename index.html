@@ -672,10 +672,13 @@ async function runSearch(q){
     if(shopifyReady()){
       let terms=[];
       try{
-        const tr=await fetch(CONFIG.CHAT_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:"terms",messages:[{role:"user",content:q}]})});
+        const tctx = history.length ? history.slice(-8).map(m=>({role:m.role,content:m.text})) : [{role:"user",content:q}];
+        const tr=await fetch(CONFIG.CHAT_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:"terms",messages:tctx})});
         const td=await tr.json(); if(td&&Array.isArray(td.terms)) terms=td.terms.filter(Boolean);
       }catch(e){ console.warn('terms:',e); }
-      const queries=[...new Set([...terms,cleanQuery(q),q.trim()].map(s=>String(s||'').trim()).filter(Boolean))];
+      // Primero las palabras EXACTAS del cliente (títulos/autores puntuales mandan),
+      // luego la versión limpia, y al final los términos conceptuales de Sonnet (géneros/temas).
+      const queries=[...new Set([q.trim(),cleanQuery(q),...terms].map(s=>String(s||'').trim()).filter(Boolean))];
       const seen=new Set();
       for(const term of queries){
         if(candidates.length>=16) break;
@@ -687,7 +690,7 @@ async function runSearch(q){
     const books=candidates.slice(0,12);
     try{
       const r=await fetch(CONFIG.CHAT_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
-        messages: history.map(m=>({role:m.role,content:m.text})),
+        messages: history.slice(-10).map(m=>({role:m.role,content:m.text})),
         candidates: books.map(b=>({handle:b.id,titulo:b.titulo,autor:b.autor,precio:b.precio,cat:b.cat,available:b.available,desc:(b.desc||'').slice(0,180)}))
       })});
       const d=await r.json();
