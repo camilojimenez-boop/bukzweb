@@ -112,6 +112,7 @@
   .stock.in{background:rgba(34,55,34,.62);color:#9be29b}
   .stock.out{background:rgba(60,38,34,.7);color:#ffb3a0}
   .stock.store{background:rgba(70,55,20,.74);color:#ffd98a}
+  .stock.imported{background:rgba(30,70,110,.82);color:#cfe7f7}
   .store-note{font-size:11px;color:#9a7b2e;margin-top:7px;display:flex;align-items:flex-start;gap:4px;line-height:1.35}
   .import-note{font-size:11px;color:#2e5a7a;margin-top:7px;display:flex;align-items:flex-start;gap:4px;line-height:1.35}
   .add-btn.out{background:#efefe9;color:#a3a299;border-color:#e6e5df;cursor:default}
@@ -369,6 +370,7 @@
   .promo-row .v{color:#2f7a2f;font-weight:700}
   .total-row .t{font-weight:700} .total-row .v{font-weight:800;font-size:16px}
   .promo-note{font-size:12px;line-height:1.4;color:var(--soft);background:rgba(242,232,92,.08);border:1px solid rgba(242,232,92,.25);border-radius:10px;padding:9px 12px;margin:4px 0 12px}
+  .ship-note{font-size:11.5px;line-height:1.4;color:rgba(255,255,255,.55);text-align:center;margin:0 0 10px}
   .wa-btn{display:inline-flex;align-items:center;gap:9px;margin-top:16px;font-family:inherit;font-size:14px;font-weight:600;color:#fff;background:#25D366;border:none;border-radius:999px;padding:11px 20px;text-decoration:none;cursor:pointer;transition:transform .14s ease,filter .14s ease}
   .wa-btn:hover{transform:translateY(-1px);filter:brightness(1.05)}
 </style>
@@ -430,6 +432,7 @@
     <div class="row promo-row" id="promoRow" style="display:none"><span class="t" id="promoLabel">Promo 3x2</span><span class="v" id="cartDiscount">−$0</span></div>
     <div class="row total-row" id="totalRow" style="display:none"><span class="t">Total</span><span class="v" id="cartTotal">$0</span></div>
     <div class="promo-note" id="promoNote" style="display:none"></div>
+    <div class="ship-note">El precio de tu envío se calculará en la pantalla de compra*</div>
     <button class="btn-primary" id="buyNow" disabled>Comprar ahora</button>
   </div>
 </aside>
@@ -729,7 +732,7 @@ async function runSearch(q){
     try{
       const r=await fetch(CONFIG.CHAT_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
         messages: history.slice(-10).map(m=>({role:m.role,content:m.text})),
-        candidates: books.map(b=>({handle:b.id,titulo:b.titulo,autor:b.autor,precio:b.precio,cat:b.cat,available:b.available,desc:(b.desc||'').slice(0,180)}))
+        candidates: books.map(b=>({handle:b.id,titulo:b.titulo,autor:b.autor,precio:b.precio,cat:b.cat,available:b.available,imported:!!b.imported,desc:(b.desc||'').slice(0,180)}))
       })});
       const d=await r.json();
       // Sonnet SOLO escribe el texto; los libros mostrados son los del buscador de Shopify
@@ -763,7 +766,8 @@ function cardHTML(b){
   const stores=(typeof storesOf==='function')?storesOf(b):[];
   const onlyStore=!online && stores.length>0;
   const pr=b.promo||(typeof promoOf==='function'?promoOf(b):null);
-  const badge = online?'<span class="stock in">Disponible</span>'
+  const badge = b.imported?'<span class="stock imported">✈️ Importado</span>'
+              : online?'<span class="stock in">Disponible</span>'
               : onlyStore?'<span class="stock store">Solo en tienda</span>'
               : '<span class="stock out">Agotado</span>';
   const addSvg='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
@@ -771,7 +775,7 @@ function cardHTML(b){
               : onlyStore?`<button class="add-btn store" data-modal="${b.id}">${PIN}<span class="add-lbl">En tienda</span></button>`
               : `<button class="add-btn out" disabled>Agotado</button>`;
   const note = onlyStore?`<div class="store-note">${PIN}<span>No disponible online, pero sí en: ${esc(stores.map(s=>s.name.replace(/^Bukz\s+/,'')).join(' · '))}</span></div>`:'';
-  const importNote = b.imported?`<div class="import-note">✈️ <span>Importado · te llega en 20 a 30 días</span></div>`:'';
+  const importNote = b.imported?`<div class="import-note">✈️ <span><strong>Importado</strong> · llega en <strong>20 a 30 días</strong></span></div>`:'';
   return `<div class="card" data-id="${b.id}">
   <div class="cover" style="${coverStyle(b)}">${b.image?'':'<span class="mark">BUKZ</span>'}${pr?`<span class="card-promo" style="background:${pr.color}">${esc(pr.badge||'3x2')}</span>`:''}${badge}</div>
   <div class="meta"><span class="cat">${esc(b.cat)}</span><div class="title">${esc(b.titulo)}</div>${b.autor?`<div class="author">${esc(b.autor)}</div>`:''}<div class="foot"><span class="price">${fmtCOP(b.precio)}</span>${footBtn}</div>${note}${importNote}
