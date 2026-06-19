@@ -735,8 +735,13 @@ async function runSearch(q){
         candidates: books.map(b=>({handle:b.id,titulo:b.titulo,autor:b.autor,precio:b.precio,cat:b.cat,available:b.available,imported:!!b.imported,desc:(b.desc||'').slice(0,180)}))
       })});
       const d=await r.json();
+      // Blindaje: si llega un texto de error (o el flag error), usar un mensaje amable y no mostrarlo al cliente
+      let rep=d.reply||'';
+      if(d.error || /^⚠️|Anthropic\s+\d{3}|usage limit|Error en el worker|rate.?limit/i.test(rep)){
+        rep = books.length ? '' : 'Escríbenos por WhatsApp y con gusto te ayudamos a encontrar tu libro.';
+      }
       // Sonnet SOLO escribe el texto; los libros mostrados son los del buscador de Shopify
-      return { reply:d.reply||friendlyReply(q), books, suggestions:(d.suggestions&&d.suggestions.length)?d.suggestions:chipsFor(books) };
+      return { reply:rep||(books.length?'':friendlyReply(q)), books, suggestions:(d.suggestions&&d.suggestions.length)?d.suggestions:chipsFor(books) };
     }catch(e){ console.warn('Backend IA:',e); }   // si la IA falla, igual mostramos los resultados de Shopify
     return { reply:friendlyReply(q), books, suggestions:books.length?chipsFor(books):[] };
   }
