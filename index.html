@@ -745,7 +745,7 @@ async function runSearch(q){
         return av(a)-av(b) || a[1]-b[1];
       }).map(x=>x[0]);
     }
-    const books=candidates.slice(0,12);
+    const books=candidates.filter(showable).slice(0,12);
     try{
       const r=await fetch(CONFIG.CHAT_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
         messages: history.slice(-10).map(m=>({role:m.role,content:m.text})),
@@ -790,13 +790,13 @@ function cardHTML(b){
   const pr=b.promo||(typeof promoOf==='function'?promoOf(b):null);
   const badge = b.imported?'<span class="stock imported">✈️ Importado</span>'
               : online?'<span class="stock in">Disponible</span>'
-              : onlyStore?'<span class="stock store">Solo en tienda</span>'
+              : onlyStore?`<span class="stock store">${esc(storeLabel(stores))}</span>`
               : '<span class="stock out">Agotado</span>';
   const addSvg='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
   const footBtn = online?`<button class="add-btn" data-add="${b.id}">${addSvg}<span class="add-lbl">Agregar</span></button>`
               : onlyStore?`<button class="add-btn store" data-modal="${b.id}">${PIN}<span class="add-lbl">En tienda</span></button>`
               : `<button class="add-btn out" disabled>Agotado</button>`;
-  const note = onlyStore?`<div class="store-note">${PIN}<span>No disponible online, pero sí en: ${esc(stores.map(s=>s.name.replace(/^Bukz\s+/,'')).join(' · '))}</span></div>`:'';
+  const note = onlyStore?`<div class="store-note">${PIN}<span>Disponible en tienda: ${esc(stores.map(s=>s.name.replace(/^Bukz\s+/,'')).join(' · '))}</span></div>`:'';
   const importNote = b.imported?`<div class="import-note">✈️ <span><strong>Importado</strong> · llega en <strong>20 a 30 días</strong></span></div>`:'';
   return `<div class="card" data-id="${b.id}">
   <div class="cover" style="${coverStyle(b)}">${b.image?'':'<span class="mark">BUKZ</span>'}${pr?`<span class="card-promo" style="background:${pr.color}">${esc(pr.badge||'3x2')}</span>`:''}${badge}</div>
@@ -818,6 +818,11 @@ function storesOf(b){
   const t=(b.tags||[]).map(x=>String(x).toLowerCase().trim());
   return STORES_DEF.filter(s=>!s.intl && (s.tags||[]).some(tag=>t.includes(String(tag).toLowerCase().trim())));
 }
+// Se muestra si: se vende online, es importado, o hay inventario en alguna tienda física.
+// Los agotados sin stock en ninguna parte NO se muestran.
+function showable(b){ return !!b && (b.available!==false || b.imported || storesOf(b).length>0); }
+// Etiqueta con el nombre de la(s) sucursal(es)
+function storeLabel(stores){ const n=(stores||[]).map(s=>s.name.replace(/^Bukz\s+/,'')); return n.length===1?('Disponible en '+n[0]):'Disponible en tienda'; }
 function storesHTML(b){
   const tags=(b.tags||[]).map(t=>String(t).toLowerCase());
   const has=arr=>arr.some(t=>tags.includes(t.toLowerCase()));
@@ -843,7 +848,7 @@ function openModal(b){
   const stores=(typeof storesOf==='function')?storesOf(b):[];
   const onlyStore=!online && stores.length>0;
   const st=document.getElementById('pmStock');
-  st.textContent=online?'Disponible':onlyStore?'Solo en tienda':'Agotado';
+  st.textContent=online?'Disponible':onlyStore?storeLabel(stores):'Agotado';
   st.className='pm-stock '+(online?'in':onlyStore?'store':'out');
   document.getElementById('pmDesc').textContent=b.desc||'Sin descripción disponible.';
   document.getElementById('pmStores').innerHTML=storesHTML(b);
@@ -862,7 +867,7 @@ function wireCards(scope){
   scope.querySelectorAll('[data-add]').forEach(btn=>btn.addEventListener('click',()=>addToCart(btn.dataset.add,btn)));
   scope.querySelectorAll('[data-modal]').forEach(btn=>btn.addEventListener('click',()=>openModal(byId(btn.dataset.modal))));
 }
-function appendBooks(grid,books){if(!grid)return;books.forEach(b=>{if(b&&b.id)seen[b.id]=b;});books.forEach((b,i)=>{const wrap=document.createElement('div');wrap.className='pop';wrap.style.animationDelay=(i*60)+'ms';wrap.innerHTML=cardHTML(b);grid.appendChild(wrap);wireCards(wrap);});}
+function appendBooks(grid,books){if(!grid)return;books=(books||[]).filter(showable);books.forEach(b=>{if(b&&b.id)seen[b.id]=b;});books.forEach((b,i)=>{const wrap=document.createElement('div');wrap.className='pop';wrap.style.animationDelay=(i*60)+'ms';wrap.innerHTML=cardHTML(b);grid.appendChild(wrap);wireCards(wrap);});}
 function mdReply(s){
   let t=esc(s||'');
   t=t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');        // **negritas**
@@ -870,7 +875,7 @@ function mdReply(s){
   t=t.replace(/\(\s*\)/g,'').replace(/\s{2,}/g,' ').replace(/\s+([.,;:!?])/g,'$1').trim();
   return t;
 }
-function addBot(reply,books,suggestions){(books||[]).forEach(b=>{if(b&&b.id)seen[b.id]=b;});const e=document.createElement('div');e.className='msg-bot';const base=150;let h=reply?`<div class="txt fade">${mdReply(reply)}</div>`:'';
+function addBot(reply,books,suggestions){books=(books||[]).filter(showable);(books||[]).forEach(b=>{if(b&&b.id)seen[b.id]=b;});const e=document.createElement('div');e.className='msg-bot';const base=150;let h=reply?`<div class="txt fade">${mdReply(reply)}</div>`:'';
   if(books&&books.length)h+=`<div class="grid">${books.map((b,i)=>`<div class="pop" style="animation-delay:${base+i*90}ms">${cardHTML(b)}</div>`).join("")}</div>`;
   if(suggestions&&suggestions.length){const cd=base+(books?books.length:0)*90+140;h+=`<div class="chips fade" style="animation-delay:${cd}ms">${suggestions.map(s=>`<button class="chip" data-q="${esc(s)}">${esc(s)}</button>`).join("")}</div>`;}
   e.innerHTML=h;thread.appendChild(e);
