@@ -71,12 +71,39 @@
   .greeting{color:rgba(140,137,128,1);font-size:17px;font-weight:400;letter-spacing:.2px;margin:0 0 14px 4px}
   .greet-title{color:#ECEAE2;font-size:22px;font-weight:600;letter-spacing:.2px;margin:0 0 5px 4px;line-height:1.22}
   .greet-sub{color:rgba(140,137,128,1);font-size:15px;font-weight:400;letter-spacing:.1px;margin:0 0 16px 4px;line-height:1.35;min-height:20px}
-  .hero-bar{display:flex;align-items:center;height:52px;padding:0 6px 0 24px;border-radius:999px;background:linear-gradient(180deg,#F6EA60 0%,#EEE157 100%);box-shadow:0 0 80px 8px rgba(240,225,90,.22),0 10px 34px rgba(0,0,0,.30)}
-  .hero-bar input{flex:1;min-width:0;background:transparent;border:none;outline:none;font-family:inherit;font-size:15.5px;color:#3a382f}
-  .hero-bar input::placeholder{color:rgba(58,56,47,.5)}
+  .hero-bar{display:flex;align-items:center;height:56px;padding:0 6px 0 24px;border-radius:999px;background:linear-gradient(180deg,rgba(245,232,92,.28),rgba(230,217,80,.18));-webkit-backdrop-filter:blur(22px) saturate(1.5);backdrop-filter:blur(22px) saturate(1.5);border:1px solid rgba(255,255,255,.28);box-shadow:0 10px 34px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.35),0 0 70px 6px rgba(240,225,90,.16)}
+  .hero-bar input{flex:1;min-width:0;background:transparent;border:none;outline:none;font-family:inherit;font-size:15.5px;font-weight:500;color:#fdf9e3;text-shadow:0 1px 2px rgba(0,0,0,.22)}
+  .hero-bar input::placeholder{color:rgba(253,249,227,.7);text-shadow:none}
   .hero-send{background:var(--black);color:var(--soft);border:none;border-radius:50%;width:40px;height:40px;cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;flex:none;transition:transform .14s ease}
   .hero-send:hover{transform:scale(1.07)}
   .hero-send:active{transform:scale(.94)}
+  /* Pop-up de bienvenida (glass) */
+  .promo-pop-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(10,10,9,.55);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .35s ease}
+  .promo-pop-overlay.open{opacity:1;pointer-events:auto}
+  .promo-pop{position:relative;width:100%;max-width:420px;border-radius:26px;padding:34px 30px 30px;text-align:center;
+    background:linear-gradient(180deg,rgba(246,236,120,.62),rgba(238,226,92,.46));
+    -webkit-backdrop-filter:blur(34px) saturate(1.7);backdrop-filter:blur(34px) saturate(1.7);
+    border:1px solid rgba(255,255,255,.55);
+    box-shadow:0 24px 70px rgba(60,54,0,.30),inset 0 1px 0 rgba(255,255,255,.65),0 0 90px 8px rgba(240,225,90,.20);
+    transform:translateY(16px) scale(.96);opacity:0;transition:transform .4s cubic-bezier(.2,.8,.2,1),opacity .4s ease}
+  .promo-pop-overlay.open .promo-pop{transform:translateY(0) scale(1);opacity:1}
+  .promo-pop-x{position:absolute;top:14px;right:16px;background:rgba(255,255,255,.35);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.5);color:#2a2820;width:30px;height:30px;border-radius:50%;font-size:19px;line-height:1;cursor:pointer;transition:all .14s ease}
+  .promo-pop-x:hover{background:rgba(255,255,255,.6)}
+  .promo-pop-badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:1.5px;color:#2a2820;background:rgba(255,255,255,.4);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.55);padding:5px 13px;border-radius:999px;margin-bottom:16px}
+  .promo-pop h3{font-size:23px;font-weight:700;color:#26241a;margin:0 0 12px;line-height:1.2}
+  .promo-pop-sub{font-size:14.5px;line-height:1.55;color:rgba(38,36,26,.82);margin:0 0 24px}
+  .promo-pop-sub strong{color:#1b1a10;font-weight:800}
+  .promo-pop-cta{width:100%;background:rgba(255,255,255,.30);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);color:#26241a;border:1px solid rgba(255,255,255,.6);border-radius:999px;padding:15px;font-family:inherit;font-size:15.5px;font-weight:700;cursor:pointer;box-shadow:0 6px 20px rgba(60,54,0,.14),inset 0 1px 0 rgba(255,255,255,.55);transition:transform .14s ease,background .14s ease}
+  .promo-pop-cta:hover{transform:translateY(-2px);background:rgba(255,255,255,.45)}
+  .promo-pop-cta:active{transform:translateY(0)}
+  .promo-pop-code{animation:popCode .45s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes popCode{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+  .promo-pop-code-label{display:block;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:rgba(38,36,26,.6);margin-bottom:10px}
+  .promo-pop-code-box{display:flex;align-items:center;gap:10px;justify-content:space-between;background:rgba(255,255,255,.22);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px dashed rgba(70,62,0,.5);border-radius:14px;padding:12px 12px 12px 18px}
+  .promo-pop-code-box span{font-size:21px;font-weight:800;letter-spacing:3px;color:#1e1c12}
+  .promo-pop-copy{background:rgba(255,255,255,.4);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);color:#26241a;border:1px solid rgba(255,255,255,.6);border-radius:10px;padding:9px 15px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;flex:none;transition:transform .14s ease,background .14s ease}
+  .promo-pop-copy:hover{transform:scale(1.04);background:rgba(255,255,255,.6)}
+  .promo-pop-note{display:block;font-size:12.5px;color:rgba(38,36,26,.62);margin-top:14px}
   .hero-logo{display:flex;justify-content:flex-end;margin-top:14px}
   .logo{height:26px;width:auto;display:block;user-select:none}
 
@@ -454,6 +481,27 @@
   <div class="drawer-items" id="histItems"></div>
   <div class="drawer-foot"><button class="hist-clear" id="clearHist">Borrar historial</button></div>
 </aside>
+
+<!-- Pop-up de bienvenida + descuento -->
+<div class="promo-pop-overlay" id="promoPopOverlay">
+  <div class="promo-pop" id="promoPop" role="dialog" aria-modal="true" aria-labelledby="promoPopTitle">
+    <button class="promo-pop-x" id="promoPopClose" aria-label="Cerrar">&times;</button>
+    <div class="promo-pop-badge">NUEVO · BUKZ IA</div>
+    <h3 id="promoPopTitle">¡Bienvenido a Bukz IA! 📚</h3>
+    <p class="promo-pop-sub">Tu nuevo buscador de libros con inteligencia artificial. Por estrenarlo con nosotros, te regalamos un <strong>5% de descuento</strong> en tu compra.</p>
+    <div class="promo-pop-reveal" id="promoPopReveal">
+      <button class="promo-pop-cta" id="promoPopCta">Quiero mi descuento</button>
+    </div>
+    <div class="promo-pop-code" id="promoPopCode" style="display:none">
+      <span class="promo-pop-code-label">Tu código de descuento</span>
+      <div class="promo-pop-code-box">
+        <span id="promoPopCodeText">BUKZIA</span>
+        <button class="promo-pop-copy" id="promoPopCopy">Copiar</button>
+      </div>
+      <span class="promo-pop-note">Aplícalo en la pantalla de pago. ¡Feliz lectura!</span>
+    </div>
+  </div>
+</div>
 
 <!-- Checkout -->
 <div class="co" id="checkout">
@@ -1361,6 +1409,33 @@ async function showPromo(key){
   scrollToEl(uEl);busy=false;
 }
 document.querySelectorAll('.qcat').forEach(b=>b.addEventListener('click',()=>{const c=b.dataset.cat;if(c==='promos')showPromosMenu();else showSection(c);}));
+
+// ── Pop-up de bienvenida + descuento BUKZIA ──
+(function(){
+  const KEY='bukz_promo_seen';
+  const ov=document.getElementById('promoPopOverlay');
+  if(!ov) return;
+  const pop=document.getElementById('promoPop');
+  const closeBtn=document.getElementById('promoPopClose');
+  const cta=document.getElementById('promoPopCta');
+  const reveal=document.getElementById('promoPopReveal');
+  const codeBox=document.getElementById('promoPopCode');
+  const copyBtn=document.getElementById('promoPopCopy');
+  function open(){ ov.classList.add('open'); }
+  function close(){ ov.classList.remove('open'); try{localStorage.setItem(KEY,'1');}catch(e){} }
+  // Mostrar una sola vez por visitante, 3 segundos después de cargar
+  let seen=false; try{ seen=localStorage.getItem(KEY)==='1'; }catch(e){}
+  if(!seen){ setTimeout(open, 3000); }
+  closeBtn.onclick=close;
+  ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape' && ov.classList.contains('open')) close(); });
+  cta.onclick=()=>{ reveal.style.display='none'; codeBox.style.display='block'; };
+  copyBtn.onclick=async()=>{
+    try{ await navigator.clipboard.writeText('BUKZIA'); }catch(e){}
+    const old=copyBtn.textContent; copyBtn.textContent='¡Copiado!';
+    setTimeout(()=>{copyBtn.textContent=old;},1600);
+  };
+})();
 </script>
 </body>
 </html>
