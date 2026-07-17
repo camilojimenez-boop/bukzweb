@@ -130,7 +130,7 @@
   /* Tarjeta */
   .card{display:flex;flex-direction:column;gap:13px;height:100%;background:#fff;border-radius:16px;padding:14px;box-shadow:0 6px 26px rgba(0,0,0,.22);transition:transform .22s cubic-bezier(.2,.7,.2,1),box-shadow .22s ease}
   .card:hover{transform:translateY(-5px);box-shadow:0 16px 40px rgba(0,0,0,.32)}
-  .cover{aspect-ratio:3/4;border-radius:11px;padding:15px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;box-shadow:0 3px 12px rgba(0,0,0,.14)}
+  .cover{aspect-ratio:3/4;border-radius:11px;padding:10px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;box-shadow:0 3px 12px rgba(0,0,0,.14);border:1px solid rgba(0,0,0,.06)}
   .cover .mark{font-size:9px;font-weight:700;letter-spacing:2.5px;color:var(--soft);opacity:.9}
   .cover .ctitle{font-size:17px;font-weight:600;line-height:1.15;color:#fff}
   .cover .cauthor{font-size:11.5px;color:rgba(255,255,255,.72);margin-top:6px}
@@ -138,6 +138,17 @@
   .meta .cat{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.4px;color:#a3a299}
   .meta .title{font-size:15px;font-weight:600;line-height:1.2;color:var(--ink)}
   .meta .author{font-size:12.5px;color:#8a8a82;margin-top:-3px}
+  .meta .ref{font-size:10.5px;color:#b2b1a8;letter-spacing:.3px;margin-top:1px;font-variant-numeric:tabular-nums}
+  .cover-zoom{position:absolute;bottom:8px;right:8px;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(28,26,22,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.3);color:#fff;cursor:pointer;opacity:0;transform:scale(.85);transition:opacity .18s ease,transform .18s ease,background .14s ease}
+  .card:hover .cover-zoom{opacity:1;transform:scale(1)}
+  .cover-zoom:hover{background:rgba(28,26,22,.8)}
+  @media(hover:none){.cover-zoom{opacity:1;transform:scale(1)}}
+  /* Visor de portada ampliada */
+  .img-lightbox{position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;padding:30px;background:rgba(8,8,7,.88);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .3s ease;cursor:zoom-out}
+  .img-lightbox.open{opacity:1;pointer-events:auto}
+  .img-lightbox img{max-width:min(92vw,560px);max-height:90vh;border-radius:12px;box-shadow:0 30px 90px rgba(0,0,0,.6);transform:scale(.94);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+  .img-lightbox.open img{transform:scale(1)}
+  .img-lightbox-x{position:absolute;top:22px;right:24px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;font-size:22px;cursor:pointer;line-height:1}
   .stock{position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;letter-spacing:.3px;padding:4px 9px;border-radius:999px;backdrop-filter:blur(4px)}
   .stock.in{background:rgba(34,55,34,.62);color:#9be29b}
   .stock.out{background:rgba(60,38,34,.7);color:#ffb3a0}
@@ -348,7 +359,8 @@
   .pm-info{flex:1;min-width:0;display:flex;flex-direction:column}
   .pm-cat{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:#a3a299}
   .pm-title{font-size:22px;font-weight:700;line-height:1.15;margin:5px 0 2px}
-  .pm-author{font-size:14px;color:#6a6a64;margin-bottom:12px}
+  .pm-author{font-size:14px;color:#6a6a64;margin-bottom:4px}
+  .pm-ref{font-size:12px;color:#a3a29a;letter-spacing:.3px;margin-bottom:12px;font-variant-numeric:tabular-nums}
   .pm-price-row{display:flex;align-items:center;gap:12px;margin-bottom:14px}
   .pm-price{font-size:22px;font-weight:700}
   .pm-stock{font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px}
@@ -597,6 +609,7 @@
 <div id="shopStatus"><span class="dot"></span><span id="shopStatusMsg"></span><button id="shopStatusX">&times;</button></div>
 
 <div class="pm-backdrop" id="pmBackdrop"></div>
+<div class="img-lightbox" id="imgLightbox"><button class="img-lightbox-x" id="imgLightboxX" aria-label="Cerrar">&times;</button><img id="imgLightboxImg" src="" alt="Portada"></div>
 <div class="pm" id="productModal" role="dialog" aria-modal="true">
   <button class="pm-x" id="pmClose" aria-label="Cerrar">&times;</button>
   <div class="pm-body">
@@ -605,6 +618,7 @@
       <span class="pm-cat" id="pmCat"></span>
       <h2 class="pm-title" id="pmTitle"></h2>
       <div class="pm-author" id="pmAuthor"></div>
+      <div class="pm-ref" id="pmRef"></div>
       <div class="pm-price-row"><span class="pm-price" id="pmPrice"></span><span class="pm-stock" id="pmStock"></span></div>
       <p class="pm-desc" id="pmDesc"></p>
       <div class="pm-stores" id="pmStores"></div>
@@ -652,7 +666,7 @@ const fmtCOP = n => "$" + n.toLocaleString("es-CO",{maximumFractionDigits:0});
 const norm = s => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const coverBg = b => `linear-gradient(160deg,${b.color} 0%,${b.color}d9 70%,${b.color}99 140%)`;
-const coverStyle = b => b.image ? `background-image:url('${b.image}');background-size:cover;background-position:center` : `background:${coverBg(b)}`;
+const coverStyle = b => b.image ? `background-image:url('${b.image}');background-size:contain;background-repeat:no-repeat;background-position:center;background-color:#fff` : `background:${coverBg(b)}`;
 
 /* ─────────── Catálogo real de Shopify (Storefront API) ─────────── */
 function pickColor(s){const pal=["#C24B2B","#7A1F1F","#3B5249","#2E4057","#1F2A44","#4A2C5A","#6B5333","#2B6E5E","#8A5A2B","#3F2A2A","#445A3B","#2E5A7A","#7A4A5A","#8A6A2B","#3A4A4A"];let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return pal[h%pal.length];}
@@ -666,8 +680,10 @@ function mapProduct(n){
   const compareAt=(v&&v.compareAtPrice&&v.compareAtPrice.amount)?Math.round(parseFloat(v.compareAtPrice.amount)):0;
   const tags=(n.tags||[]);
   const vendor=n.vendor||"";
+  const sku=(v&&v.sku)?String(v.sku).trim():"";
+  const isbn=(v&&v.barcode)?String(v.barcode).trim():"";
   const imported=/bukz\s*espa/i.test(vendor) || tags.map(t=>String(t).toLowerCase().trim()).includes('bukz españa');
-  return { id:n.handle||n.id, titulo:n.title, autor:vendor, vendor, imported, precio,
+  return { id:n.handle||n.id, titulo:n.title, autor:vendor, vendor, imported, precio, sku, isbn,
     cat:n.productType||"Libros", desc:(n.description||"").trim(),
     image:n.featuredImage?n.featuredImage.url:"", url:(CONFIG.SHOPIFY.productUrlBase||"")+(n.handle||""),
     variantId:v?v.id:"", compareAt:(compareAt>precio?compareAt:0),
@@ -677,7 +693,7 @@ async function loadShopifyCatalog(){
   const sh=CONFIG.SHOPIFY;
   if(!sh||!sh.domain||sh.domain.startsWith("tu-tienda")||!sh.storefrontToken) return false;
   const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
-  const query=`query($cursor:String){products(first:50,after:$cursor,sortKey:BEST_SELLING){pageInfo{hasNextPage endCursor}edges{node{id title handle vendor productType tags description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id}}}}}}}`;
+  const query=`query($cursor:String){products(first:50,after:$cursor,sortKey:BEST_SELLING){pageInfo{hasNextPage endCursor}edges{node{id title handle vendor productType tags description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id sku barcode}}}}}}}`;
   let cursor=null,all=[],pages=0;
   try{
     do{
@@ -695,7 +711,7 @@ function shopifyReady(){const sh=CONFIG.SHOPIFY;return !!(sh&&sh.domain&&!sh.dom
 async function shopifySearch(text){
   const sh=CONFIG.SHOPIFY;
   const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
-  const fields='id title handle vendor productType tags description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id}}}';
+  const fields='id title handle vendor productType tags description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id sku barcode}}}';
   // 1) Motor nativo "search" (Search & Discovery): mejor relevancia y tolerancia a errores
   try{
     const q1=`query($q:String!){search(query:$q,first:30,types:[PRODUCT]){edges{node{... on Product{${fields}}}}}}`;
@@ -875,11 +891,14 @@ function cardHTML(b){
               : `<button class="add-btn out" disabled>Agotado</button>`;
   const note = onlyStore?`<div class="store-note">${PIN}<span>Disponible en tienda: ${esc(stores.map(s=>s.name.replace(/^Bukz\s+/,'')).join(' · '))}</span></div>`:'';
   const importNote = b.imported?`<div class="import-note">✈️ <span><strong>Importado</strong> · llega en <strong>20 a 30 días</strong></span></div>`:'';
+  const ref = b.isbn?`ISBN ${esc(b.isbn)}`:(b.sku?`SKU ${esc(b.sku)}`:'');
+  const zoomBtn = b.image?`<button class="cover-zoom" data-zoom="${esc(b.image)}" aria-label="Ampliar portada">${ZOOMSVG}</button>`:'';
   return `<div class="card" data-id="${b.id}">
-  <div class="cover" style="${coverStyle(b)}">${b.image?'':'<span class="mark">BUKZ</span>'}${pr?`<span class="card-promo" style="background:${pr.color}">${esc(pr.badge||'3x2')}</span>`:''}${badge}</div>
-  <div class="meta"><span class="cat">${esc(b.cat)}</span><div class="title">${esc(b.titulo)}</div>${b.autor?`<div class="author">${esc(b.autor)}</div>`:''}<div class="foot"><span class="price">${fmtCOP(b.precio)}</span>${footBtn}</div>${note}${importNote}
+  <div class="cover" style="${coverStyle(b)}">${b.image?'':'<span class="mark">BUKZ</span>'}${pr?`<span class="card-promo" style="background:${pr.color}">${esc(pr.badge||'3x2')}</span>`:''}${badge}${zoomBtn}</div>
+  <div class="meta"><span class="cat">${esc(b.cat)}</span><div class="title">${esc(b.titulo)}</div>${b.autor?`<div class="author">${esc(b.autor)}</div>`:''}${ref?`<div class="ref">${ref}</div>`:''}<div class="foot"><span class="price">${fmtCOP(b.precio)}</span>${footBtn}</div>${note}${importNote}
   <button class="more" data-modal="${b.id}">Ver detalles</button>
   </div></div>`;}
+const ZOOMSVG='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>';
 
 // Sedes — disponibilidad según los tags del producto
 const STORES_DEF = [
@@ -918,9 +937,14 @@ function pmShow(open){document.getElementById('productModal').classList.toggle('
 function openModal(b){
   if(!b) return;
   document.getElementById('pmCover').style.cssText=coverStyle(b);
+  const pmc=document.getElementById('pmCover');
+  if(b.image){ pmc.style.cursor='zoom-in'; pmc.onclick=()=>openLightbox(b.image); } else { pmc.style.cursor='default'; pmc.onclick=null; }
   document.getElementById('pmCat').textContent=b.cat||'';
   document.getElementById('pmTitle').textContent=b.titulo||'';
   document.getElementById('pmAuthor').textContent=b.autor||'';
+  const pmRef=document.getElementById('pmRef');
+  pmRef.textContent=b.isbn?('ISBN '+b.isbn):(b.sku?('SKU '+b.sku):'');
+  pmRef.style.display=pmRef.textContent?'block':'none';
   document.getElementById('pmPrice').textContent=fmtCOP(b.precio);
   const online=b.available!==false;
   const stores=(typeof storesOf==='function')?storesOf(b):[];
@@ -944,7 +968,20 @@ function wireCards(scope){
   scope.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>ask(c.dataset.q)));
   scope.querySelectorAll('[data-add]').forEach(btn=>btn.addEventListener('click',()=>addToCart(btn.dataset.add,btn)));
   scope.querySelectorAll('[data-modal]').forEach(btn=>btn.addEventListener('click',()=>openModal(byId(btn.dataset.modal))));
+  scope.querySelectorAll('[data-zoom]').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();openLightbox(btn.dataset.zoom);}));
 }
+// Visor de portada ampliada
+function openLightbox(src){
+  if(!src) return;
+  const lb=document.getElementById('imgLightbox');
+  document.getElementById('imgLightboxImg').src=src;
+  lb.classList.add('open');
+}
+function closeLightbox(){ document.getElementById('imgLightbox').classList.remove('open'); }
+document.getElementById('imgLightbox').addEventListener('click',closeLightbox);
+document.getElementById('imgLightboxImg').addEventListener('click',e=>e.stopPropagation());
+document.getElementById('imgLightboxX').addEventListener('click',closeLightbox);
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeLightbox(); });
 function appendBooks(grid,books){if(!grid)return;books=(books||[]).filter(showable);books.forEach(b=>{if(b&&b.id)seen[b.id]=b;});books.forEach((b,i)=>{const wrap=document.createElement('div');wrap.className='pop';wrap.style.animationDelay=(i*60)+'ms';wrap.innerHTML=cardHTML(b);grid.appendChild(wrap);wireCards(wrap);});}
 function mdReply(s){
   let t=esc(s||'');
@@ -1042,7 +1079,7 @@ async function collectionHandlesByTitle(title){
 async function sfQueryPage(queryStr,cursor,n){
   const sh=CONFIG.SHOPIFY; if(!shopifyReady())return {books:[],cursor:null,hasNext:false};
   const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
-  const node='id title handle vendor productType tags description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id price{amount} compareAtPrice{amount}}}}';
+  const node='id title handle vendor productType tags description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id sku barcode price{amount} compareAtPrice{amount}}}}';
   const q=`query($c:String){products(first:${n||24},after:$c,query:${JSON.stringify(queryStr)}){pageInfo{hasNextPage endCursor}edges{node{${node}}}}}`;
   try{
     const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query:q,variables:{c:cursor||null}})});
@@ -1295,14 +1332,14 @@ async function sfProducts(opts){
   if(opts.query)args.push('query:'+JSON.stringify(opts.query));
   if(opts.sortKey)args.push('sortKey:'+opts.sortKey);
   if(opts.reverse)args.push('reverse:true');
-  const node='id title handle vendor productType tags description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id price{amount} compareAtPrice{amount}}}}';
+  const node='id title handle vendor productType tags description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id sku barcode price{amount} compareAtPrice{amount}}}}';
   const query='{products('+args.join(',')+'){edges{node{'+node+'}}}}';
   try{const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query})});const j=await r.json();if(!j.data||!j.data.products){console.warn('home:',j.errors||j);return [];}return j.data.products.edges.map(e=>mapProduct(e.node));}catch(e){console.warn('sfProducts:',e);return [];}
 }
 async function sfCollectionPage(handle,cursor,n){
   const sh=CONFIG.SHOPIFY; if(!shopifyReady())return {books:[],cursor:null,hasNext:false};
   const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
-  const node='id title handle vendor productType tags description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id price{amount} compareAtPrice{amount}}}}';
+  const node='id title handle vendor productType tags description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id sku barcode price{amount} compareAtPrice{amount}}}}';
   const q=`query($c:String){collection(handle:${JSON.stringify(handle)}){products(first:${n||24},after:$c){pageInfo{hasNextPage endCursor}edges{node{${node}}}}}}`;
   try{
     const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query:q,variables:{c:cursor||null}})});
@@ -1314,7 +1351,7 @@ async function sfCollectionPage(handle,cursor,n){
 async function sfCollectionByTitle(title){
   const sh=CONFIG.SHOPIFY; if(!shopifyReady())return [];
   const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
-  const node='id title handle vendor productType tags description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id price{amount} compareAtPrice{amount}}}}';
+  const node='id title handle vendor productType tags description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id sku barcode price{amount} compareAtPrice{amount}}}}';
   const q='{collections(first:5,query:'+JSON.stringify('title:'+title)+'){edges{node{handle products(first:30){edges{node{'+node+'}}}}}}}';
   try{
     const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":sh.storefrontToken},body:JSON.stringify({query:q})});
