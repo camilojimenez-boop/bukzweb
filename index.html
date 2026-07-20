@@ -703,7 +703,6 @@ const CONFIG = {
   MES_COLLECTION: "libros-del-mes",     // colección de Shopify para el botón "Libros del mes"
   NOVEDADES_COLLECTION: "penguin-novedades",  // colección para el botón "Novedades"
   PROMOS: [
-    { key:"penguin", menuLabel:"3x2 Penguin Random House", badge:"Penguin 3x2", tag:"3X2 PENGUIN",        color:"#F97316", desc:"Compra 2 libros de Penguin Random House y lleva el tercero gratis." },
     { key:"planeta", menuLabel:"3x2 Planeta",               badge:"Planeta 3x2", tag:"PROMO 3X2 PLANETA", color:"#2F6FED", desc:"Compra 2 libros de Planeta de Libros y lleva el tercero gratis." }
   ],
   // Producción: Bold necesita tu llave de comercio + firma de integridad (hash)
@@ -956,7 +955,7 @@ function cardHTML(b){
   const zoomBtn = b.image?`<button class="cover-zoom" data-zoom="${esc(b.image)}" aria-label="Ampliar portada">${ZOOMSVG}</button>`:'';
   const favBtn = `<button class="cover-fav${isFav(b.id)?' active':''}" data-fav="${b.id}" aria-label="Guardar en favoritos">${HEARTSVG}</button>`;
   return `<div class="card" data-id="${b.id}">
-  <div class="cover" style="${coverStyle(b)}">${b.image?'':'<span class="mark">BUKZ</span>'}${pr?`<span class="card-promo" style="background:${pr.color}">${esc(pr.badge||'3x2')}</span>`:''}${badge}${favBtn}${zoomBtn}</div>
+  <div class="cover" style="${coverStyle(b)}">${b.image?'':'<span class="mark">BUKZ</span>'}${badge}${favBtn}${zoomBtn}</div>
   <div class="meta"><span class="cat">${esc(b.cat)}</span><div class="title">${esc(b.titulo)}</div>${b.autor?`<div class="author">${esc(b.autor)}</div>`:''}${ref?`<div class="ref">${ref}</div>`:''}<div class="foot"><span class="price">${fmtCOP(b.precio)}</span>${footBtn}</div>${note}${importNote}
   <button class="more" data-modal="${b.id}">Ver detalles</button>
   </div></div>`;}
@@ -1184,7 +1183,7 @@ function updateBadge(){const n=cartCount();cartBadge.textContent=n;cartBadge.cla
 function renderCart(){const box=document.getElementById('cartItems');
   if(!cart.length){box.innerHTML='<div class="empty">Tu carrito está vacío.<br>Pídele una recomendación al buscador 📚</div>';}
   else{box.innerHTML=cart.map(i=>{const b=byId(i.id);const pr=promoOf(b);return `<div class="ci"><div class="ci-cover" style="${coverStyle(b)}"></div>
-    <div class="ci-info"><div class="ci-title">${esc(b.titulo)}${pr?`<span class="ci-promo" style="background:${pr.color};color:#fff">${esc(pr.badge||'3x2')}</span>`:''}</div><div class="ci-author">${esc(b.autor)}</div>
+    <div class="ci-info"><div class="ci-title">${esc(b.titulo)}</div><div class="ci-author">${esc(b.autor)}</div>
     <div class="ci-bottom"><div class="qty"><button data-m="${b.id}">−</button><span>${i.qty}</span><button data-p="${b.id}">+</button></div><span class="ci-price">${fmtCOP(b.precio*i.qty)}</span></div></div></div>`;}).join("");
     box.querySelectorAll('[data-m]').forEach(x=>x.onclick=()=>setQty(x.dataset.m,-1));
     box.querySelectorAll('[data-p]').forEach(x=>x.onclick=()=>setQty(x.dataset.p,1));}
@@ -1369,7 +1368,7 @@ document.querySelectorAll('#idSeg button').forEach(b=>b.onclick=()=>{
 });
 
 function renderSummary(){
-  document.getElementById('sumItems').innerHTML=cart.map(i=>{const b=byId(i.id);const pr=promoOf(b);return `<div class="si"><div class="si-cover" style="${coverStyle(b)}"></div><div class="si-info"><div class="si-t">${esc(b.titulo)}${pr?` <span class="ci-promo" style="background:${pr.color};color:#fff">${esc(pr.badge||'3x2')}</span>`:''}</div><div class="si-q">Cantidad: ${i.qty}</div></div><div class="si-p">${fmtCOP(b.precio*i.qty)}</div></div>`;}).join("");
+  document.getElementById('sumItems').innerHTML=cart.map(i=>{const b=byId(i.id);return `<div class="si"><div class="si-cover" style="${coverStyle(b)}"></div><div class="si-info"><div class="si-t">${esc(b.titulo)}</div><div class="si-q">Cantidad: ${i.qty}</div></div><div class="si-p">${fmtCOP(b.precio*i.qty)}</div></div>`;}).join("");
   const sub=cartSubtotal(),pc=promoCalc();
   document.getElementById('sumSub').textContent=fmtCOP(sub);
   const sd=document.getElementById('sumDiscount');
