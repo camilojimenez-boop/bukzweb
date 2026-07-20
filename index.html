@@ -703,7 +703,7 @@ const CONFIG = {
   MES_COLLECTION: "libros-del-mes",     // colección de Shopify para el botón "Libros del mes"
   NOVEDADES_COLLECTION: "penguin-novedades",  // colección para el botón "Novedades"
   PROMOS: [
-    { key:"planeta", menuLabel:"3x2 Planeta",               badge:"Planeta 3x2", tag:"PROMO 3X2 PLANETA", color:"#2F6FED", desc:"Compra 2 libros de Planeta de Libros y lleva el tercero gratis." }
+    { key:"planeta", menuLabel:"3x2 Planeta",               badge:"Planeta 3x2", tag:"PROMO 3X2 PLANETA", vendorMatch:"planeta", color:"#2F6FED", desc:"Compra 2 libros de Planeta de Libros y lleva el tercero gratis." }
   ],
   // Producción: Bold necesita tu llave de comercio + firma de integridad (hash)
   // generada en backend. Siigo necesita su API (auth + crear factura) tras el pago.
@@ -1105,7 +1105,7 @@ heroInput.focus();
 let cart=[]; // {id, qty}
 let PROMO_SETS={}; // {key: Set(handles)}
 const cartBadge=document.getElementById('cartBadge');
-function promoOf(b){if(!b)return null;for(const p of (CONFIG.PROMOS||[])){const set=PROMO_SETS[p.key];if(set&&set.has(b.id))return p;}return null;}
+function promoOf(b){if(!b)return null;for(const p of (CONFIG.PROMOS||[])){const set=PROMO_SETS[p.key];const inSet=set&&set.has(b.id);const vend=p.vendorMatch&&norm(String(b.vendor||b.autor||'')).includes(norm(p.vendorMatch));if(inSet||vend)return p;}return null;}
 function isPromo(b){return !!promoOf(b);}
 function cartCount(){return cart.reduce((s,i)=>s+i.qty,0);}
 function cartSubtotal(){return cart.reduce((s,i)=>{const b=byId(i.id);return s+(b?b.precio*i.qty:0);},0);}
