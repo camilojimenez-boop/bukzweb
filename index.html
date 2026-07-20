@@ -106,6 +106,9 @@
   .promo-pop-copy{background:rgba(242,232,92,.14);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);color:var(--soft);border:1px solid rgba(242,232,92,.42);border-radius:10px;padding:9px 15px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;flex:none;transition:transform .14s ease,background .14s ease}
   .promo-pop-copy:hover{transform:scale(1.04);background:rgba(242,232,92,.24)}
   .promo-pop-note{display:block;font-size:12.5px;color:rgba(255,255,255,.5);margin-top:14px}
+  .wl-pop{max-width:440px}
+  .wl-pop-list{margin:20px 0 6px;max-height:38vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:4px}
+  .wl-pop-actions{margin-top:8px}
   .hero-logo{display:flex;justify-content:flex-end;margin-top:14px}
   .logo{height:26px;width:auto;display:block;user-select:none}
 
@@ -555,6 +558,21 @@
         <button class="promo-pop-copy" id="promoPopCopy">Copiar</button>
       </div>
       <span class="promo-pop-note">Aplícalo en la pantalla de pago. ¡Feliz lectura!</span>
+    </div>
+  </div>
+</div>
+
+<!-- Pop-up de lista de deseos compartida -->
+<div class="promo-pop-overlay" id="wlPopOverlay">
+  <div class="promo-pop wl-pop" role="dialog" aria-modal="true">
+    <button class="promo-pop-x" id="wlPopClose" aria-label="Cerrar">&times;</button>
+    <div class="promo-pop-badge">🎁 LISTA DE DESEOS</div>
+    <h3>Mira mi lista de deseos,<br><strong>¡patrocínamelos!</strong></h3>
+    <p class="promo-pop-sub">Estos son los libros que quiero. ¿Te animas a regalarme alguno? 👀</p>
+    <div class="wl-pop-list" id="wlPopList"></div>
+    <div class="wl-pop-actions">
+      <button class="promo-pop-cta" id="wlPopAddAll">Agregar todos al carrito</button>
+      <button class="fav-share-btn primary" id="wlPopSave" style="margin-top:10px">♡ Guardar en mis favoritos</button>
     </div>
   </div>
 </div>
@@ -1278,15 +1296,25 @@ async function initSharedWishlist(){
   const p=new URLSearchParams(location.search); const wl=p.get('wl'); if(!wl)return;
   const handles=decodeWl(wl); if(!handles.length)return;
   const books=await fetchByHandles(handles); if(!books.length)return;
-  app.classList.add('chat-mode');
-  const msgEl=addBot('📚 Alguien compartió esta lista de libros contigo. Guárdalos en tus favoritos o agrégalos al carrito:',books,[]);
-  if(msgEl){
-    const b=document.createElement('button'); b.className='fav-share-btn primary'; b.style.maxWidth='320px'; b.style.marginTop='4px';
-    b.textContent='♡ Guardar toda la lista en mis favoritos';
-    b.onclick=()=>{books.forEach(x=>{if(!isFav(x.id))toggleFav(x.id);});b.textContent='✓ Guardados en favoritos';};
-    msgEl.appendChild(b);
-  }
+  openSharedWl(books);
 }
+function openSharedWl(books){
+  const list=document.getElementById('wlPopList'); if(!list)return;
+  list.innerHTML=books.map(b=>`<div class="fav-item">
+    <div class="fi-cover" data-favzoom="${esc(b.image||'')}" style="${b.image?`background-image:url('${esc(b.image)}')`:''}"></div>
+    <div class="fi-info"><div class="fi-t">${esc(b.titulo)}</div><div class="fi-p">${fmtCOP(b.precio)}</div></div>
+    <div class="fi-actions"><button class="fi-btn" data-wladd="${esc(b.id)}">Agregar</button></div>
+  </div>`).join('');
+  list.querySelectorAll('[data-wladd]').forEach(x=>x.onclick=()=>{addToCart(x.dataset.wladd);const o=x.textContent;x.textContent='✓';setTimeout(()=>{x.textContent=o;},1000);});
+  list.querySelectorAll('[data-favzoom]').forEach(c=>{const src=c.dataset.favzoom;if(src){c.style.cursor='zoom-in';c.onclick=()=>openLightbox(src);}});
+  const ov=document.getElementById('wlPopOverlay');
+  document.getElementById('wlPopAddAll').onclick=()=>{books.forEach(b=>addToCart(b.id));ov.classList.remove('open');openCart();};
+  const saveBtn=document.getElementById('wlPopSave');
+  saveBtn.onclick=()=>{books.forEach(b=>{if(!isFav(b.id))toggleFav(b.id);});saveBtn.textContent='✓ Guardados en favoritos';};
+  ov.classList.add('open');
+}
+document.getElementById('wlPopClose').onclick=()=>document.getElementById('wlPopOverlay').classList.remove('open');
+document.getElementById('wlPopOverlay').addEventListener('click',e=>{ if(e.target===e.currentTarget) e.currentTarget.classList.remove('open'); });
 
 loadCart();updateBadge();renderCart();
 loadFavs();initSharedWishlist();
@@ -1582,7 +1610,8 @@ document.querySelectorAll('.qcat').forEach(b=>b.addEventListener('click',()=>{co
   function close(){ ov.classList.remove('open'); try{localStorage.setItem(KEY,'1');}catch(e){} }
   // Mostrar una sola vez por visitante, 3 segundos después de cargar
   let seen=false; try{ seen=localStorage.getItem(KEY)==='1'; }catch(e){}
-  if(!seen){ setTimeout(open, 3000); }
+  const isShared=!!new URLSearchParams(location.search).get('wl');
+  if(!seen && !isShared){ setTimeout(open, 3000); }
   closeBtn.onclick=close;
   ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape' && ov.classList.contains('open')) close(); });
