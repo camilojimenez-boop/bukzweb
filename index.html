@@ -143,6 +143,38 @@
   .card:hover .cover-zoom{opacity:1;transform:scale(1)}
   .cover-zoom:hover{background:rgba(28,26,22,.8)}
   @media(hover:none){.cover-zoom{opacity:1;transform:scale(1)}}
+  /* Corazón de favoritos en portada */
+  .cover-fav{position:absolute;bottom:8px;left:8px;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(28,26,22,.5);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.3);cursor:pointer;z-index:3;transition:transform .14s ease,background .14s ease}
+  .cover-fav svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;transition:all .16s ease}
+  .cover-fav:hover{background:rgba(28,26,22,.75);transform:scale(1.08)}
+  .cover-fav.active{background:rgba(255,90,122,.2);border-color:rgba(255,90,122,.55)}
+  .cover-fav.active svg{fill:#ff5a7a;stroke:#ff5a7a}
+  /* Cajón de favoritos */
+  .fav-item{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px;margin:8px 0}
+  .fav-item .fi-cover{width:44px;height:60px;border-radius:7px;flex:none;background-color:#fff;background-size:contain;background-repeat:no-repeat;background-position:center;border:1px solid rgba(0,0,0,.06)}
+  .fav-item .fi-info{flex:1;min-width:0}
+  .fav-item .fi-t{font-size:13.5px;font-weight:600;color:#ECEAE2;line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .fav-item .fi-p{font-size:12.5px;color:var(--soft);margin-top:3px}
+  .fav-item .fi-actions{display:flex;flex-direction:column;gap:6px;flex:none;align-items:flex-end}
+  .fav-item .fi-btn{background:rgba(242,232,92,.12);border:1px solid rgba(242,232,92,.4);color:var(--soft);border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .14s ease}
+  .fav-item .fi-btn:hover{background:rgba(242,232,92,.22)}
+  .fav-item .fi-x{background:transparent;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:15px;line-height:1}
+  .fav-item .fi-x:hover{color:#ff8fa3}
+  .fav-empty{color:rgba(255,255,255,.45);font-size:14px;text-align:center;padding:40px 16px;line-height:1.5}
+  .fav-share{display:flex;flex-direction:column;gap:9px}
+  .fav-share-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border-radius:999px;padding:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:all .14s ease}
+  .fav-share-btn.primary{background:rgba(242,232,92,.14);border:1px solid rgba(242,232,92,.45);color:var(--soft)}
+  .fav-share-btn.primary:hover{background:rgba(242,232,92,.24)}
+  .fav-share-btn.wa{background:#25D366;border:none;color:#fff}
+  .fav-share-btn.wa:hover{filter:brightness(1.05)}
+  .fav-add-all{width:100%;background:transparent;border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.75);border-radius:999px;padding:11px;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;margin-bottom:9px;transition:all .14s ease}
+  .fav-add-all:hover{border-color:rgba(242,232,92,.4);color:var(--soft)}
+  /* Corazón en el modal */
+  .pm-fav{display:inline-flex;align-items:center;gap:8px;margin-top:10px;background:transparent;border:1px solid rgba(0,0,0,.12);color:#6a6a64;border-radius:999px;padding:9px 16px;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;transition:all .14s ease}
+  .pm-fav svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2}
+  .pm-fav:hover{border-color:rgba(255,90,122,.4)}
+  .pm-fav.active{background:rgba(255,90,122,.1);border-color:rgba(255,90,122,.4);color:#e0466a}
+  .pm-fav.active svg{fill:#ff5a7a;stroke:#ff5a7a}
   /* Visor de portada ampliada */
   .img-lightbox{position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;padding:30px;background:rgba(8,8,7,.88);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .3s ease;cursor:zoom-out}
   .img-lightbox.open{opacity:1;pointer-events:auto}
@@ -432,6 +464,10 @@
   <div class="glow"></div><div class="glow2"></div>
 
   <div class="topbar">
+    <button class="icon-btn" id="favBtn" aria-label="Favoritos">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"></path></svg>
+      <span class="badge" id="favBadge"></span>
+    </button>
     <button class="icon-btn" id="histBtn" aria-label="Historial de búsquedas">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
     </button>
@@ -494,6 +530,12 @@
   <div class="drawer-head"><h3>Tu historial de búsquedas</h3><button class="x-btn" id="closeHist">&times;</button></div>
   <div class="drawer-items" id="histItems"></div>
   <div class="drawer-foot"><button class="hist-clear" id="clearHist">Borrar historial</button></div>
+</aside>
+
+<aside class="drawer" id="favDrawer">
+  <div class="drawer-head"><h3>Tus favoritos</h3><button class="x-btn" id="closeFav">&times;</button></div>
+  <div class="drawer-items" id="favItems"></div>
+  <div class="drawer-foot" id="favFoot"></div>
 </aside>
 
 <!-- Pop-up de bienvenida + descuento -->
@@ -623,6 +665,7 @@
       <p class="pm-desc" id="pmDesc"></p>
       <div class="pm-stores" id="pmStores"></div>
       <button class="pm-add" id="pmAdd">Agregar al carrito</button>
+      <button class="pm-fav" id="pmFav"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"></path></svg><span id="pmFavLbl">Añadir a favoritos</span></button>
     </div>
   </div>
 </div>
@@ -893,12 +936,14 @@ function cardHTML(b){
   const importNote = b.imported?`<div class="import-note">✈️ <span><strong>Importado</strong> · llega en <strong>20 a 30 días</strong></span></div>`:'';
   const ref = b.isbn?`ISBN ${esc(b.isbn)}`:(b.sku?`SKU ${esc(b.sku)}`:'');
   const zoomBtn = b.image?`<button class="cover-zoom" data-zoom="${esc(b.image)}" aria-label="Ampliar portada">${ZOOMSVG}</button>`:'';
+  const favBtn = `<button class="cover-fav${isFav(b.id)?' active':''}" data-fav="${b.id}" aria-label="Guardar en favoritos">${HEARTSVG}</button>`;
   return `<div class="card" data-id="${b.id}">
-  <div class="cover" style="${coverStyle(b)}">${b.image?'':'<span class="mark">BUKZ</span>'}${pr?`<span class="card-promo" style="background:${pr.color}">${esc(pr.badge||'3x2')}</span>`:''}${badge}${zoomBtn}</div>
+  <div class="cover" style="${coverStyle(b)}">${b.image?'':'<span class="mark">BUKZ</span>'}${pr?`<span class="card-promo" style="background:${pr.color}">${esc(pr.badge||'3x2')}</span>`:''}${badge}${favBtn}${zoomBtn}</div>
   <div class="meta"><span class="cat">${esc(b.cat)}</span><div class="title">${esc(b.titulo)}</div>${b.autor?`<div class="author">${esc(b.autor)}</div>`:''}${ref?`<div class="ref">${ref}</div>`:''}<div class="foot"><span class="price">${fmtCOP(b.precio)}</span>${footBtn}</div>${note}${importNote}
   <button class="more" data-modal="${b.id}">Ver detalles</button>
   </div></div>`;}
 const ZOOMSVG='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>';
+const HEARTSVG='<svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"></path></svg>';
 
 // Sedes — disponibilidad según los tags del producto
 const STORES_DEF = [
@@ -957,6 +1002,9 @@ function openModal(b){
   const addBtn=document.getElementById('pmAdd');
   addBtn.disabled=!online;addBtn.textContent=online?'Agregar al carrito':onlyStore?'Disponible solo en tienda':'Agotado';
   addBtn.onclick=online?function(){addToCart(b.id);addBtn.textContent='✓ Añadido';setTimeout(()=>{addBtn.textContent='Agregar al carrito';},1200);}:null;
+  const pmFav=document.getElementById('pmFav'), pmFavLbl=document.getElementById('pmFavLbl');
+  const setFavLbl=()=>{const on=isFav(b.id);pmFav.classList.toggle('active',on);pmFavLbl.textContent=on?'En favoritos':'Añadir a favoritos';};
+  setFavLbl(); pmFav.onclick=()=>{toggleFav(b.id);setFavLbl();};
   pmShow(true);
 }
 document.getElementById('pmClose').onclick=()=>pmShow(false);
@@ -969,6 +1017,7 @@ function wireCards(scope){
   scope.querySelectorAll('[data-add]').forEach(btn=>btn.addEventListener('click',()=>addToCart(btn.dataset.add,btn)));
   scope.querySelectorAll('[data-modal]').forEach(btn=>btn.addEventListener('click',()=>openModal(byId(btn.dataset.modal))));
   scope.querySelectorAll('[data-zoom]').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();openLightbox(btn.dataset.zoom);}));
+  scope.querySelectorAll('[data-fav]').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();toggleFav(btn.dataset.fav);}));
 }
 // Visor de portada ampliada
 function openLightbox(src){
@@ -1170,8 +1219,77 @@ function openCart(){renderCart();drawer.classList.add('open');backdrop.classList
 function closeCart(){drawer.classList.remove('open');backdrop.classList.remove('open');}
 document.getElementById('cartBtn').onclick=openCart;
 document.getElementById('closeCart').onclick=closeCart;
-backdrop.onclick=()=>{closeCart();closeHist();};
+backdrop.onclick=()=>{closeCart();closeHist();closeFav();};
+
+// ── Favoritos / Wishlist (en el dispositivo) + compartir por enlace ──
+const favDrawer=document.getElementById('favDrawer');
+const FAV_KEY='bukz_favorites';
+let FAVS=[];
+function loadFavs(){ try{FAVS=JSON.parse(localStorage.getItem(FAV_KEY)||'[]')||[];}catch(e){FAVS=[];} FAVS.forEach(b=>{if(b&&b.id&&!seen[b.id])seen[b.id]=b;}); updateFavBadge(); }
+function saveFavs(){ try{localStorage.setItem(FAV_KEY,JSON.stringify(FAVS));}catch(e){} }
+function isFav(id){ return FAVS.some(b=>b.id===String(id)); }
+function favSnapshot(b){ return {id:b.id,titulo:b.titulo,autor:b.autor,precio:b.precio,image:b.image||'',imported:!!b.imported,cat:b.cat||'Libros',sku:b.sku||'',isbn:b.isbn||'',tags:b.tags||[],available:b.available,variantId:b.variantId||''}; }
+function updateFavBadge(){ const el=document.getElementById('favBadge'); if(!el)return; if(FAVS.length){el.textContent=FAVS.length;el.style.display='flex';}else{el.style.display='none';} }
+function syncHearts(){ document.querySelectorAll('[data-fav]').forEach(btn=>btn.classList.toggle('active',isFav(btn.dataset.fav))); }
+function toggleFav(id){ const b=byId(id); if(!b)return; const i=FAVS.findIndex(x=>x.id===String(id)); if(i>=0)FAVS.splice(i,1); else FAVS.unshift(favSnapshot(b)); saveFavs(); updateFavBadge(); syncHearts(); if(favDrawer.classList.contains('open'))renderFav(); }
+function favShareLink(){ const ids=FAVS.map(b=>b.id); let enc=''; try{enc=encodeURIComponent(btoa(unescape(encodeURIComponent(ids.join(',')))));}catch(e){enc=encodeURIComponent(ids.join(','));} return location.origin+location.pathname+'?wl='+enc; }
+function renderFav(){
+  const box=document.getElementById('favItems'), foot=document.getElementById('favFoot');
+  if(!FAVS.length){ box.innerHTML='<div class="fav-empty">Aún no tienes favoritos.<br>Toca el corazón ♡ en cualquier libro para guardarlo aquí.</div>'; foot.innerHTML=''; return; }
+  box.innerHTML=FAVS.map(b=>`<div class="fav-item">
+    <div class="fi-cover" data-favzoom="${esc(b.image||'')}" style="${b.image?`background-image:url('${esc(b.image)}')`:''}"></div>
+    <div class="fi-info"><div class="fi-t">${esc(b.titulo)}</div><div class="fi-p">${fmtCOP(b.precio)}</div></div>
+    <div class="fi-actions"><button class="fi-x" data-favremove="${esc(b.id)}" aria-label="Quitar">&times;</button><button class="fi-btn" data-favadd="${esc(b.id)}">Agregar</button></div>
+  </div>`).join('');
+  box.querySelectorAll('[data-favremove]').forEach(x=>x.onclick=()=>toggleFav(x.dataset.favremove));
+  box.querySelectorAll('[data-favadd]').forEach(x=>x.onclick=()=>{addToCart(x.dataset.favadd);const o=x.textContent;x.textContent='✓';setTimeout(()=>{x.textContent=o;},1000);});
+  box.querySelectorAll('[data-favzoom]').forEach(c=>{const src=c.dataset.favzoom;if(src){c.style.cursor='zoom-in';c.onclick=()=>openLightbox(src);}});
+  foot.innerHTML=`<button class="fav-add-all" id="favAddAll">Agregar todos al carrito</button>
+    <div class="fav-share">
+      <button class="fav-share-btn primary" id="favCopy">🔗 Copiar enlace para compartir</button>
+      <button class="fav-share-btn wa" id="favWa">Compartir por WhatsApp</button>
+    </div>`;
+  document.getElementById('favAddAll').onclick=()=>{FAVS.forEach(b=>addToCart(b.id));closeFav();openCart();};
+  document.getElementById('favCopy').onclick=async()=>{const link=favShareLink();try{await navigator.clipboard.writeText(link);}catch(e){}const btn=document.getElementById('favCopy');const o=btn.textContent;btn.textContent='✓ ¡Enlace copiado!';setTimeout(()=>{btn.textContent=o;},1800);};
+  document.getElementById('favWa').onclick=()=>{const link=favShareLink();if(navigator.share){navigator.share({title:'Mi lista de libros en Bukz',text:'📚 Mira mi lista de libros en Bukz:',url:link}).catch(()=>{});}else{window.open('https://wa.me/?text='+encodeURIComponent('📚 Mira mi lista de libros en Bukz:\n'+link),'_blank');}};
+}
+function openFav(){ renderFav(); favDrawer.classList.add('open'); backdrop.classList.add('open'); }
+function closeFav(){ favDrawer.classList.remove('open'); backdrop.classList.remove('open'); }
+document.getElementById('favBtn').onclick=openFav;
+document.getElementById('closeFav').onclick=closeFav;
+
+// Leer una lista compartida por enlace (?wl=...) y mostrarla
+async function fetchByHandles(handles){
+  handles=(handles||[]).filter(Boolean).slice(0,50); if(!handles.length)return [];
+  const sh=CONFIG.SHOPIFY; const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
+  const fields='id title handle vendor productType tags description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id sku barcode}}}';
+  const qstr=handles.map(h=>`(handle:${JSON.stringify(h)})`).join(' OR ');
+  try{
+    const q=`query($q:String!){products(first:${handles.length},query:$q){edges{node{${fields}}}}}`;
+    const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','X-Shopify-Storefront-Access-Token':sh.storefrontToken},body:JSON.stringify({query:q,variables:{q:qstr}})});
+    const j=await r.json();
+    const items=(j.data&&j.data.products)?j.data.products.edges.map(e=>mapProduct(e.node)).filter(Boolean):[];
+    const map={}; items.forEach(b=>{map[b.id]=b;seen[b.id]=b;});
+    return handles.map(h=>map[h]).filter(Boolean);
+  }catch(e){ console.warn('wishlist fetch',e); return []; }
+}
+function decodeWl(v){ try{ return decodeURIComponent(escape(atob(decodeURIComponent(v)))).split(',').map(s=>s.trim()).filter(Boolean); }catch(e){ try{return decodeURIComponent(v).split(',').map(s=>s.trim()).filter(Boolean);}catch(_){return [];} } }
+async function initSharedWishlist(){
+  const p=new URLSearchParams(location.search); const wl=p.get('wl'); if(!wl)return;
+  const handles=decodeWl(wl); if(!handles.length)return;
+  const books=await fetchByHandles(handles); if(!books.length)return;
+  app.classList.add('chat-mode');
+  const msgEl=addBot('📚 Alguien compartió esta lista de libros contigo. Guárdalos en tus favoritos o agrégalos al carrito:',books,[]);
+  if(msgEl){
+    const b=document.createElement('button'); b.className='fav-share-btn primary'; b.style.maxWidth='320px'; b.style.marginTop='4px';
+    b.textContent='♡ Guardar toda la lista en mis favoritos';
+    b.onclick=()=>{books.forEach(x=>{if(!isFav(x.id))toggleFav(x.id);});b.textContent='✓ Guardados en favoritos';};
+    msgEl.appendChild(b);
+  }
+}
+
 loadCart();updateBadge();renderCart();
+loadFavs();initSharedWishlist();
 
 /* ─────────── CHECKOUT ─────────── */
 const checkout=document.getElementById('checkout');
