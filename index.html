@@ -1281,14 +1281,15 @@ async function fetchByHandles(handles){
   handles=(handles||[]).filter(Boolean).slice(0,50); if(!handles.length)return [];
   const sh=CONFIG.SHOPIFY; const endpoint=`https://${sh.domain}/api/${sh.apiVersion||'2024-10'}/graphql.json`;
   const fields='id title handle vendor productType tags description(truncateAt:400) availableForSale featuredImage{url} priceRange{minVariantPrice{amount}} variants(first:1){edges{node{id sku barcode}}}';
-  const qstr=handles.map(h=>`(handle:${JSON.stringify(h)})`).join(' OR ');
+  const parts=handles.map((h,i)=>`p${i}: product(handle:${JSON.stringify(h)}){${fields}}`).join('\n');
   try{
-    const q=`query($q:String!){products(first:${handles.length},query:$q){edges{node{${fields}}}}}`;
-    const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','X-Shopify-Storefront-Access-Token':sh.storefrontToken},body:JSON.stringify({query:q,variables:{q:qstr}})});
+    const q=`query{${parts}}`;
+    const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','X-Shopify-Storefront-Access-Token':sh.storefrontToken},body:JSON.stringify({query:q})});
     const j=await r.json();
-    const items=(j.data&&j.data.products)?j.data.products.edges.map(e=>mapProduct(e.node)).filter(Boolean):[];
-    const map={}; items.forEach(b=>{map[b.id]=b;seen[b.id]=b;});
-    return handles.map(h=>map[h]).filter(Boolean);
+    const data=(j&&j.data)?j.data:{};
+    const out=[];
+    handles.forEach((h,i)=>{ const n=data['p'+i]; if(n){ const b=mapProduct(n); if(b){ seen[b.id]=b; out.push(b); } } });
+    return out;
   }catch(e){ console.warn('wishlist fetch',e); return []; }
 }
 function decodeWl(v){ try{ return decodeURIComponent(escape(atob(decodeURIComponent(v)))).split(',').map(s=>s.trim()).filter(Boolean); }catch(e){ try{return decodeURIComponent(v).split(',').map(s=>s.trim()).filter(Boolean);}catch(_){return [];} } }
