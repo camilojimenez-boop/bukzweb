@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-NDLJR8ZT');</script>
+<!-- End Google Tag Manager -->
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <title>BUKZ · Tu librería favorita</title>
@@ -442,6 +449,8 @@
   .promo-head{background:color-mix(in srgb, var(--pc,#F2E85C) 13%, transparent);border:1px solid color-mix(in srgb, var(--pc,#F2E85C) 45%, transparent);border-radius:16px;padding:16px 20px;margin-bottom:20px}
   .promo-head .pt{font-size:17px;font-weight:800;color:var(--pc,#F2E85C);letter-spacing:.2px}
   .promo-head .ps{font-size:14px;color:#e8e6df;margin-top:5px;line-height:1.45}
+  .promo-share{margin-top:14px;background:color-mix(in srgb, var(--pc,#F2E85C) 18%, transparent);border:1px solid color-mix(in srgb, var(--pc,#F2E85C) 55%, transparent);color:#fff;border-radius:999px;padding:9px 16px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:background .14s ease}
+  .promo-share:hover{background:color-mix(in srgb, var(--pc,#F2E85C) 30%, transparent)}
   .promo-menu{display:flex;flex-wrap:wrap;gap:14px;margin-top:16px}
   .promo-opt{flex:1 1 220px;min-width:200px;background:rgba(255,255,255,.04);border:1px solid color-mix(in srgb, var(--pc,#888) 40%, transparent);border-left:4px solid var(--pc,#888);border-radius:14px;padding:15px 16px;display:flex;flex-direction:column;gap:8px}
   .promo-opt-h{display:flex;align-items:center;gap:9px}
@@ -461,6 +470,10 @@
 </style>
 </head>
 <body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NDLJR8ZT"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
 <div id="app">
 
   <div class="bgslides" id="bgSlides"><div class="bgslide" style="background-image:url(https://cdn.shopify.com/s/files/1/0043/3016/0163/files/Stefan-Zweig-El-escritor-ante-la-barbarie-1.jpg?v=1783014133)"></div><div class="bgslide" style="background-image:url(https://cdn.shopify.com/s/files/1/0043/3016/0163/files/Yousuf-Karsh-Ernest-Hemingway-1957.webp?v=1783014137)"></div><div class="bgslide" style="background-image:url(https://cdn.shopify.com/s/files/1/0043/3016/0163/files/GettyImages-171275978-56a4da0e3df78cf77284f36c.jpg?v=1783014172)"></div><div class="bgslide" style="background-image:url(https://cdn.shopify.com/s/files/1/0043/3016/0163/files/dan-brown-at-desk_1.jpg?v=1783014183)"></div><div class="bgslide" style="background-image:url(https://cdn.shopify.com/s/files/1/0043/3016/0163/files/Agatha-Christie-1946.webp?v=1783014205)"></div><div class="bgslide" style="background-image:url(https://cdn.shopify.com/s/files/1/0043/3016/0163/files/20241213_3_Thiago-Antunes_Fantasia-Moderna_IEL_scarpa_AJS_0473-2.jpg?v=1783014211)"></div><div class="bgslide" style="background-image:url(https://cdn.shopify.com/s/files/1/0043/3016/0163/files/0e5424c707cd10f0fd8a6f1398c2200e-8854435-33229014-data.webp?v=1783014230)"></div><div class="bgslide" style="background-image:url(https://cdn.shopify.com/s/files/1/0043/3016/0163/files/8e98d2c87f764ef07c7441280586bb825c5fa629.jpg?v=1783014494)"></div><div class="bgslide" style="background-image:url(https://cdn.shopify.com/s/files/1/0043/3016/0163/files/ursula-k-le-guin.jpg?v=1783014497)"></div><div class="bgslide" style="background-image:url(https://cdn.shopify.com/s/files/1/0043/3016/0163/files/julio-cortazar-fue-uno-de-los-escritores-mas-L3WZKAKWGZCP3KMLYBQUPLKZJU.avif?v=1783014679)"></div><div class="bgslide" style="background-image:url(https://cdn.shopify.com/s/files/1/0043/3016/0163/files/fernando-pessoa-rua.jpg?v=1783014687)"></div><div class="bgslide" style="background-image:url(https://cdn.shopify.com/s/files/1/0043/3016/0163/files/kafka-2.avif?v=1783014722)"></div><div class="bgslide" style="background-image:url(https://cdn.shopify.com/s/files/1/0043/3016/0163/files/4SC2SMDMCJGBTKQ7SRWSN7R7RE.avif?v=1783014728)"></div><div class="bgslide" style="background-image:url(https://cdn.shopify.com/s/files/1/0043/3016/0163/files/7HQHOZJRR5ARNDBQIPMPS3YHOA.jpg?v=1783014731)"></div></div>
@@ -1448,6 +1461,8 @@ document.getElementById('shopStatusX').onclick=()=>document.getElementById('shop
       await loadShopifyCatalog();
       showShopStatus(true,'✔ Conectado a Shopify ('+CATALOG.length+' productos cargados).');
       loadPromoSets();
+      const _pk=new URLSearchParams(location.search).get('promo');
+      if(_pk && (CONFIG.PROMOS||[]).some(p=>p.key===_pk)){ setTimeout(()=>showPromo(_pk),250); }
 
     }else{
       showShopStatus(false,'Shopify respondió <b>HTTP '+r.status+'</b>: '+(j?JSON.stringify(j.errors||j):txt).slice(0,220));
@@ -1555,9 +1570,10 @@ function showPromosMenu(){
 }
 async function loadPromoBooks(promo,cursor){
   let acc=[],cur=cursor,hasNext=true,guard=0;
+  const qstr = promo.vendorMatch ? `(tag:'${promo.tag}') OR (vendor:${promo.vendorMatch})` : `tag:'${promo.tag}'`;
   while(guard<4 && acc.length<6){
     guard++;
-    const page=await sfQueryPage("tag:'"+promo.tag+"'",cur,24);
+    const page=await sfQueryPage(qstr,cur,24);
     acc=acc.concat((page.books||[]).filter(b=>b && b.available!==false));   // solo disponibles
     cur=page.cursor;hasNext=page.hasNext;
     if(!page.hasNext)break;
@@ -1577,8 +1593,10 @@ async function showPromo(key){
   history.push({role:'assistant',text:promo.menuLabel});
   const msgEl=addBot('',page.books,[]);
   const head=document.createElement('div');head.className='promo-head fade';head.style.setProperty('--pc',promo.color);
-  head.innerHTML=`<div class="pt">${esc(promo.menuLabel||promo.badge)}</div><div class="ps">${esc(promo.desc||'Compra 2 libros y lleva el tercero gratis.')} Las promos no se combinan entre sí.</div>`;
+  head.innerHTML=`<div class="pt">${esc(promo.menuLabel||promo.badge)}</div><div class="ps">${esc(promo.desc||'Compra 2 libros y lleva el tercero gratis.')} Las promos no se combinan entre sí.</div><button class="promo-share" data-psk="${esc(key)}">🔗 Compartir esta promo</button>`;
   msgEl.insertBefore(head,msgEl.firstChild);
+  const psBtn=head.querySelector('.promo-share');
+  if(psBtn){ psBtn.addEventListener('click',async()=>{ const link=location.origin+location.pathname+'?promo='+encodeURIComponent(key); try{await navigator.clipboard.writeText(link);}catch(e){} const o=psBtn.textContent; psBtn.textContent='✓ Enlace copiado'; setTimeout(()=>{psBtn.textContent=o;},1800); }); }
   if(page.hasNext){
     const grid=msgEl.querySelector('.grid');
     const more=document.createElement('button');more.className='ver-mas';more.textContent='Ver más';
@@ -1610,7 +1628,8 @@ document.querySelectorAll('.qcat').forEach(b=>b.addEventListener('click',()=>{co
   function close(){ ov.classList.remove('open'); try{localStorage.setItem(KEY,'1');}catch(e){} }
   // Mostrar una sola vez por visitante, 3 segundos después de cargar
   let seen=false; try{ seen=localStorage.getItem(KEY)==='1'; }catch(e){}
-  const isShared=!!new URLSearchParams(location.search).get('wl');
+  const sp=new URLSearchParams(location.search);
+  const isShared=!!sp.get('wl') || !!sp.get('promo');
   if(!seen && !isShared){ setTimeout(open, 3000); }
   closeBtn.onclick=close;
   ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
